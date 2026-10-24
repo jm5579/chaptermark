@@ -40,6 +40,33 @@ export function compareItems(a: ItemLike, b: ItemLike): number {
     return String(b.entry.lastReadAt ?? '').localeCompare(String(a.entry.lastReadAt ?? ''))
 }
 
+const nativeScript = /[\p{Script=Hangul}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}]/u
+const nativeFor: Record<string, RegExp> = {
+    manhwa: /\p{Script=Hangul}/u,
+    manga: /[\p{Script=Hiragana}\p{Script=Katakana}]/u,
+    manhua: /^[^\p{Script=Hangul}\p{Script=Hiragana}\p{Script=Katakana}]*\p{Script=Han}/u,
+}
+const latinOnly = /^[\x20-\x7E’]+$/
+const foreignArticle = /^(der|die|das|ein|eine|el|la|las|los|le|les|lo|il|gli|un|una|une|o|os|as)\s/i
+
+/**
+ * The alternate names worth showing under a title: one romanized name and the
+ * native-script name (Korean for manhwa, Japanese for manga, Chinese for
+ * manhua), rather than e.g. the German or Spanish translation.
+ */
+export function pickAltTitles(title: string, alts: string[] | undefined, type?: string, max = 2): string[] {
+    const others = (alts ?? []).filter(a => a !== title)
+    const latin = others.find(a => latinOnly.test(a) && !foreignArticle.test(a))
+    const preferred = type ? nativeFor[type] : undefined
+    const native = (preferred && others.find(a => preferred.test(a))) || others.find(a => nativeScript.test(a))
+    const picked = [latin, native].filter((a): a is string => !!a)
+    for (const a of others) {
+        if (picked.length >= max) break
+        if (!picked.includes(a)) picked.push(a)
+    }
+    return picked.slice(0, max)
+}
+
 export interface View<T> {
     shelf: T[]
     list: T[]

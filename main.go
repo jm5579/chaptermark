@@ -2,7 +2,6 @@ package main
 
 import (
 	"embed"
-	"net/http"
 	"path/filepath"
 
 	"github.com/wailsapp/wails/v2"
@@ -24,9 +23,9 @@ func main() {
 	dataDir, err := paths.ExeDataDir()
 	app := NewApp(dataDir, err)
 
-	var coverHandler http.Handler = http.NotFoundHandler()
+	var coverMiddleware assetserver.Middleware
 	if err == nil {
-		coverHandler = covers.Handler(filepath.Join(dataDir, "covers"))
+		coverMiddleware = covers.Middleware(filepath.Join(dataDir, "covers"))
 	}
 
 	err = wails.Run(&options.App{
@@ -36,8 +35,8 @@ func main() {
 		MinWidth:  1000,
 		MinHeight: 680,
 		AssetServer: &assetserver.Options{
-			Assets:  assets,
-			Handler: coverHandler,
+			Assets:     assets,
+			Middleware: coverMiddleware,
 		},
 		BackgroundColour: &options.RGBA{R: 20, G: 18, B: 24, A: 1},
 		OnStartup:        app.startup,

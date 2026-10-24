@@ -74,6 +74,25 @@ func TestHandlerServesFile(t *testing.T) {
 	}
 }
 
+func TestMiddlewareRoutesCoversBeforeAssets(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "7.jpg"), []byte("JPEG"), 0o644)
+	spa := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("index.html")) })
+	srv := httptest.NewServer(Middleware(dir)(spa))
+	defer srv.Close()
+	for path, want := range map[string]string{"/covers/7.jpg": "JPEG", "/": "index.html", "/assets/app.js": "index.html"} {
+		resp, err := http.Get(srv.URL + path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if string(b) != want {
+			t.Errorf("GET %s = %q, want %q", path, b, want)
+		}
+	}
+}
+
 func TestHandlerRejectsTraversal(t *testing.T) {
 	dir := t.TempDir()
 	os.WriteFile(filepath.Join(filepath.Dir(dir), "library.db"), []byte("secret"), 0o644)

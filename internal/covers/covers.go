@@ -58,6 +58,22 @@ func Download(ctx context.Context, c *httpx.Client, url, dir string, seriesID in
 	return name, nil
 }
 
+// Middleware serves /covers/ requests from dir and passes everything else to
+// next. It runs in front of the app's assets, so covers work both in the built
+// exe and under the dev server (which would otherwise answer every path).
+func Middleware(dir string) func(next http.Handler) http.Handler {
+	covers := Handler(dir)
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasPrefix(r.URL.Path, "/covers/") {
+				covers.ServeHTTP(w, r)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
 // Handler serves GET /covers/<seriesID>.<ext> from dir; anything else is 404.
 func Handler(dir string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

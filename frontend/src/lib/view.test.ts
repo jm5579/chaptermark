@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest'
-import {compareItems, hasNew, selectView, type ItemLike} from './view'
+import {compareItems, hasNew, pickAltTitles, selectView, type ItemLike} from './view'
 
 let nextId = 1
 function item(type: string, status: string, newCount: number, myRating: number, lastReadAt = '0001-01-01T00:00:00Z'): ItemLike & {id: number} {
@@ -53,6 +53,27 @@ describe('selectView', () => {
     it('counts tabs within the selected type', () => {
         const v = selectView(all, 'manhwa', 'reading')
         expect(v.tabCounts).toEqual({reading: 4, plan: 1, completed: 0, on_hold: 1, dropped: 0})
+    })
+})
+
+describe('pickAltTitles', () => {
+    it('prefers a romanized name and the native-script name over translations', () => {
+        const alts = ['Omniscient Reader', 'Der allwissende Leser', 'Jeonjijeok Dokja Sijeom', 'Lecteur omniscient',
+            "Omniscient Reader's Viewpoint", 'ORV', '전지적 독자 시점']
+        expect(pickAltTitles('Omniscient Reader', alts)).toEqual(['Jeonjijeok Dokja Sijeom', '전지적 독자 시점'])
+    })
+
+    it('picks the native script that matches the type', () => {
+        const alts = ['Jeonjijeok Dokja Sijeom', '全知的な読者の視点から', '전지적 독자 시점']
+        expect(pickAltTitles('ORV', alts, 'manhwa')).toEqual(['Jeonjijeok Dokja Sijeom', '전지적 독자 시점'])
+        expect(pickAltTitles('ORV', alts, 'manga')).toEqual(['Jeonjijeok Dokja Sijeom', '全知的な読者の視点から'])
+        expect(pickAltTitles('MP', ['Wu Lian Dian Feng', '武炼巅峰'], 'manhua')).toEqual(['Wu Lian Dian Feng', '武炼巅峰'])
+    })
+
+    it('falls back to the remaining names in order', () => {
+        expect(pickAltTitles('Kingdom', ['Kingdom', 'El Reino', 'Kingudamu'])).toEqual(['Kingudamu', 'El Reino'])
+        expect(pickAltTitles('X', ['X'])).toEqual([])
+        expect(pickAltTitles('X', undefined)).toEqual([])
     })
 })
 

@@ -4,6 +4,10 @@ on:
   push:
   pull_request:
 
+# Tests only need to read the code.
+permissions:
+  contents: read
+
 jobs:
   test-and-build:
     runs-on: windows-latest

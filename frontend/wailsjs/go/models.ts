@@ -93,6 +93,7 @@ export namespace library {
 	    readUrl: string;
 	    typeOverride: string;
 	    latestManual?: number;
+	    tags: string[];
 	
 	    static createFrom(source: any = {}) {
 	        return new EntryUpdate(source);
@@ -107,6 +108,7 @@ export namespace library {
 	        this.readUrl = source["readUrl"];
 	        this.typeOverride = source["typeOverride"];
 	        this.latestManual = source["latestManual"];
+	        this.tags = source["tags"];
 	    }
 	}
 	export class ItemView {
@@ -216,6 +218,22 @@ export namespace main {
 	        this.backupsKeep = source["backupsKeep"];
 	    }
 	}
+	export class ViewPrefs {
+	    sort: string;
+	    staleOnly: boolean;
+	    tag: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ViewPrefs(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.sort = source["sort"];
+	        this.staleOnly = source["staleOnly"];
+	        this.tag = source["tag"];
+	    }
+	}
 
 }
 
@@ -234,6 +252,7 @@ export namespace store {
 	    addedAt: any;
 	    // Go type: time
 	    updatedAt: any;
+	    tags: string[];
 	
 	    static createFrom(source: any = {}) {
 	        return new Entry(source);
@@ -250,6 +269,7 @@ export namespace store {
 	        this.lastReadAt = this.convertValues(source["lastReadAt"], null);
 	        this.addedAt = this.convertValues(source["addedAt"], null);
 	        this.updatedAt = this.convertValues(source["updatedAt"], null);
+	        this.tags = source["tags"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -299,6 +319,8 @@ export namespace store {
 	    detailsRefreshedAt: any;
 	    // Go type: time
 	    chaptersCheckedAt: any;
+	    releaseIntervalDays: number;
+	    lastReleaseDate: string;
 	    altTitles: string[];
 	
 	    static createFrom(source: any = {}) {
@@ -333,6 +355,8 @@ export namespace store {
 	        this.latestManual = source["latestManual"];
 	        this.detailsRefreshedAt = this.convertValues(source["detailsRefreshedAt"], null);
 	        this.chaptersCheckedAt = this.convertValues(source["chaptersCheckedAt"], null);
+	        this.releaseIntervalDays = source["releaseIntervalDays"];
+	        this.lastReleaseDate = source["lastReleaseDate"];
 	        this.altTitles = source["altTitles"];
 	    }
 	
@@ -353,6 +377,22 @@ export namespace store {
 		    }
 		    return a;
 		}
+	}
+	export class Tag {
+	    id: number;
+	    name: string;
+	    count: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Tag(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.count = source["count"];
+	    }
 	}
 
 }

@@ -53,6 +53,27 @@ func TestInitReportsUnwritableFolder(t *testing.T) {
 	}
 }
 
+func TestViewPrefsPersist(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "data")
+	a := readyApp(t, dir)
+	if got := a.GetViewPrefs(); got != (ViewPrefs{Sort: "smart"}) {
+		t.Fatalf("defaults = %+v", got)
+	}
+	want := ViewPrefs{Sort: "rating", StaleOnly: true, Tag: "Favourites"}
+	if err := a.SaveViewPrefs(want); err != nil {
+		t.Fatal(err)
+	}
+	for _, bad := range []ViewPrefs{{Sort: "nonsense"}, {Sort: "title", Tag: strings.Repeat("x", 41)}} {
+		if err := a.SaveViewPrefs(bad); err == nil {
+			t.Errorf("SaveViewPrefs(%+v) should fail", bad)
+		}
+	}
+	a.close()
+	if got := readyApp(t, dir).GetViewPrefs(); got != want {
+		t.Fatalf("after reopening = %+v, want %+v", got, want)
+	}
+}
+
 func TestFitWindowSize(t *testing.T) {
 	cases := []struct{ w, h, sw, sh, wantW, wantH int }{
 		{2400, 1350, 1366, 768, 1326, 688}, // saved on a big monitor, reopened on a laptop

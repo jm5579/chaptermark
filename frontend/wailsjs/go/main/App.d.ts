@@ -4,6 +4,7 @@ import {library} from '../models';
 import {checker} from '../models';
 import {main} from '../models';
 import {exportimport} from '../models';
+import {store} from '../models';
 
 export function AddSeries(arg1:number,arg2:library.AddInput):Promise<library.ItemView>;
 
@@ -11,9 +12,13 @@ export function CheckNow():Promise<void>;
 
 export function CheckStatus():Promise<checker.Progress>;
 
+export function DeleteTag(arg1:number):Promise<void>;
+
 export function ExportLibrary():Promise<string>;
 
 export function GetSettings():Promise<main.Settings>;
+
+export function GetViewPrefs():Promise<main.ViewPrefs>;
 
 export function ImportLibrary(arg1:string):Promise<exportimport.Result>;
 
@@ -21,13 +26,19 @@ export function Init():Promise<main.InitResult>;
 
 export function ListLibrary():Promise<Array<library.ItemView>>;
 
+export function ListTags():Promise<Array<store.Tag>>;
+
 export function OpenDataFolder():Promise<void>;
 
 export function OpenURL(arg1:string):Promise<void>;
 
 export function RemoveSeries(arg1:number):Promise<void>;
 
+export function RenameTag(arg1:number,arg2:string):Promise<void>;
+
 export function SaveSettings(arg1:main.Settings):Promise<void>;
+
+export function SaveViewPrefs(arg1:main.ViewPrefs):Promise<void>;
 
 export function SearchLocal(arg1:string):Promise<Array<library.ItemView>>;
 

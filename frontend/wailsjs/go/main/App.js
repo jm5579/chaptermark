@@ -14,12 +14,20 @@ export function CheckStatus() {
   return window['go']['main']['App']['CheckStatus']();
 }
 
+export function DeleteTag(arg1) {
+  return window['go']['main']['App']['DeleteTag'](arg1);
+}
+
 export function ExportLibrary() {
   return window['go']['main']['App']['ExportLibrary']();
 }
 
 export function GetSettings() {
   return window['go']['main']['App']['GetSettings']();
+}
+
+export function GetViewPrefs() {
+  return window['go']['main']['App']['GetViewPrefs']();
 }
 
 export function ImportLibrary(arg1) {
@@ -34,6 +42,10 @@ export function ListLibrary() {
   return window['go']['main']['App']['ListLibrary']();
 }
 
+export function ListTags() {
+  return window['go']['main']['App']['ListTags']();
+}
+
 export function OpenDataFolder() {
   return window['go']['main']['App']['OpenDataFolder']();
 }
@@ -46,8 +58,16 @@ export function RemoveSeries(arg1) {
   return window['go']['main']['App']['RemoveSeries'](arg1);
 }
 
+export function RenameTag(arg1, arg2) {
+  return window['go']['main']['App']['RenameTag'](arg1, arg2);
+}
+
 export function SaveSettings(arg1) {
   return window['go']['main']['App']['SaveSettings'](arg1);
+}
+
+export function SaveViewPrefs(arg1) {
+  return window['go']['main']['App']['SaveViewPrefs'](arg1);
 }
 
 export function SearchLocal(arg1) {

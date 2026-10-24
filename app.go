@@ -421,3 +421,72 @@ func (a *App) OpenURL(url string) {
 		runtime.BrowserOpenURL(a.ctx, url)
 	}
 }
+
+// ---- List view preferences and tags ----
+
+const metaViewPrefs = "view_prefs"
+
+// ViewPrefs are the list's sort and filter choices, remembered in the data
+// folder so they travel with it.
+type ViewPrefs struct {
+	Sort      string `json:"sort"`      // smart, rating, title, lastRead, newCount, muRating or added
+	StaleOnly bool   `json:"staleOnly"` // only series not read in 6+ months
+	Tag       string `json:"tag"`       // only series with this tag ("" = all)
+}
+
+var sortModes = map[string]bool{
+	"smart": true, "rating": true, "title": true, "lastRead": true,
+	"newCount": true, "muRating": true, "added": true,
+}
+
+func (a *App) GetViewPrefs() ViewPrefs {
+	p := ViewPrefs{Sort: "smart"}
+	if a.store == nil {
+		return p
+	}
+	if v, ok, _ := a.store.GetMeta(context.Background(), metaViewPrefs); ok {
+		var saved ViewPrefs
+		if json.Unmarshal([]byte(v), &saved) == nil && sortModes[saved.Sort] {
+			p = saved
+		}
+	}
+	return p
+}
+
+func (a *App) SaveViewPrefs(p ViewPrefs) error {
+	if !sortModes[p.Sort] {
+		return fmt.Errorf("unknown sort %q", p.Sort)
+	}
+	if len([]rune(p.Tag)) > 40 {
+		return errors.New("tag names can be at most 40 characters")
+	}
+	if a.store == nil {
+		return errNotReady
+	}
+	b, err := json.Marshal(p)
+	if err != nil {
+		return err
+	}
+	return a.store.SetMeta(context.Background(), metaViewPrefs, string(b))
+}
+
+func (a *App) ListTags() ([]store.Tag, error) {
+	if err := a.ready(); err != nil {
+		return nil, err
+	}
+	return a.lib.Tags(context.Background())
+}
+
+func (a *App) RenameTag(id int64, name string) error {
+	if err := a.ready(); err != nil {
+		return err
+	}
+	return a.lib.RenameTag(context.Background(), id, name)
+}
+
+func (a *App) DeleteTag(id int64) error {
+	if err := a.ready(); err != nil {
+		return err
+	}
+	return a.lib.DeleteTag(context.Background(), id)
+}

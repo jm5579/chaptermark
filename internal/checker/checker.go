@@ -63,6 +63,21 @@ func (c *Checker) Due(ctx context.Context) (bool, error) {
 	return last.IsZero() || c.now().Sub(last) >= c.Interval(), nil
 }
 
+// Watch calls run on every tick whose check is due (see Due), until ctx ends.
+// It keeps chapters fresh while the app stays open for days.
+func (c *Checker) Watch(ctx context.Context, ticks <-chan time.Time, run func()) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticks:
+			if due, _ := c.Due(ctx); due {
+				run()
+			}
+		}
+	}
+}
+
 // Status returns the progress of the current or most recent check.
 func (c *Checker) Status() Progress {
 	c.mu.Lock()

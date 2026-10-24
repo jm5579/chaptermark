@@ -146,6 +146,42 @@ func TestSeriesRemovedDuringCheckIsNotAFailure(t *testing.T) {
 	}
 }
 
+func TestWatchRunsWhenDueWhileAppIsOpen(t *testing.T) {
+	f := newFixture(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	ticks := make(chan time.Time)
+	runs := make(chan struct{}, 4)
+	done := make(chan struct{})
+	go func() {
+		f.chk.Watch(ctx, ticks, func() { runs <- struct{}{} })
+		close(done)
+	}()
+
+	f.lib.Store.SetMeta(ctx, "last_full_check_at", now.Add(-7*time.Hour).Format(time.RFC3339))
+	ticks <- now
+	select {
+	case <-runs:
+	case <-time.After(2 * time.Second):
+		t.Fatal("a due check did not run on tick")
+	}
+
+	f.lib.Store.SetMeta(ctx, "last_full_check_at", now.Add(-time.Hour).Format(time.RFC3339))
+	ticks <- now
+	ticks <- now // the second send proves the first tick was fully handled
+	select {
+	case <-runs:
+		t.Fatal("ran although the last check was only an hour ago")
+	default:
+	}
+
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("Watch did not stop when its context ended")
+	}
+}
+
 func TestDue(t *testing.T) {
 	f := newFixture(t)
 	ctx := context.Background()

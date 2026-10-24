@@ -205,6 +205,31 @@ func TestSearchLocalAndRemove(t *testing.T) {
 	}
 }
 
+func TestRefreshDetailsKeepsEditsMadeDuringFetch(t *testing.T) {
+	svc, mu, _, _ := newService(t)
+	ctx := context.Background()
+	v, _ := svc.Add(ctx, libtest.ORVID, AddInput{Status: store.StatusReading, MyChapter: 300})
+	manual := 400.0
+	// The owner edits the series while MangaUpdates is being queried.
+	mu.OnSeries = func() {
+		mu.OnSeries = nil
+		if _, err := svc.UpdateEntry(ctx, v.Series.ID, EntryUpdate{Status: store.StatusReading, MyChapter: 300,
+			TypeOverride: store.TypeManga, LatestManual: &manual}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := svc.RefreshDetails(ctx, v.Series.ID); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := svc.Get(ctx, v.Series.ID)
+	if got.Series.TypeOverride != store.TypeManga || got.Series.LatestManual == nil || *got.Series.LatestManual != 400 {
+		t.Fatalf("refresh overwrote the owner's edit: override %q manual %v", got.Series.TypeOverride, got.Series.LatestManual)
+	}
+	if got.Series.LatestChapter != 311 || len(got.Series.AltTitles) != 4 {
+		t.Fatalf("refresh lost data: %+v", got.Series)
+	}
+}
+
 func TestRefreshLatestAndStale(t *testing.T) {
 	svc, mu, _, _ := newService(t)
 	ctx := context.Background()

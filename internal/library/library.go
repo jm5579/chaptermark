@@ -318,7 +318,9 @@ func (s *Service) RefreshDetails(ctx context.Context, seriesID int64) error {
 	s.enrich(ctx, &sr)
 	s.fetchCover(ctx, &sr)
 	sr.DetailsRefreshedAt = s.now()
-	return s.Store.UpsertSeries(ctx, &sr)
+	// Only metadata is written: the owner may have edited this series while
+	// the network calls above were running.
+	return s.Store.UpdateDetails(ctx, &sr)
 }
 
 // RefreshLatest looks up the newest release for a series and stores it.

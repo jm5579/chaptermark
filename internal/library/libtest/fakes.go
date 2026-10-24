@@ -21,6 +21,7 @@ type MU struct {
 	Releases map[int64]mangaupdates.Release
 	Err      error         // returned by every call when set
 	Block    chan struct{} // when set, LatestRelease waits until it is closed
+	OnSeries func()        // when set, runs inside Series (simulates edits during the network call)
 
 	mu    sync.Mutex
 	Calls []int64 // series ids passed to LatestRelease, in order
@@ -48,6 +49,9 @@ func (f *MU) Search(ctx context.Context, q string, page int) ([]mangaupdates.Sea
 }
 
 func (f *MU) Series(ctx context.Context, id int64) (mangaupdates.SeriesDetail, error) {
+	if f.OnSeries != nil {
+		f.OnSeries()
+	}
 	if f.Err != nil {
 		return mangaupdates.SeriesDetail{}, f.Err
 	}

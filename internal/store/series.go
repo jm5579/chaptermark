@@ -80,12 +80,56 @@ func (s *Store) UpsertSeries(ctx context.Context, sr *Series) error {
 	if err != nil {
 		return err
 	}
-	if _, err := tx.ExecContext(ctx, "DELETE FROM alt_titles WHERE series_id = ?", sr.ID); err != nil {
+	titles, err := replaceAltTitles(ctx, tx, sr.ID, sr.Title, sr.AltTitles)
+	if err != nil {
 		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	sr.AltTitles = titles
+	return nil
+}
+
+// UpdateDetails writes only the public metadata of sr (names, type, ratings,
+// links, cover) and its alternate titles. Owner-set fields (type override,
+// manual latest) and the latest-chapter columns are left as they are in the
+// database, so a slow refresh can't undo an edit made while it was running.
+func (s *Store) UpdateDetails(ctx context.Context, sr *Series) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	res, err := tx.ExecContext(ctx, `UPDATE series SET md_id = ?, al_id = ?, mal_id = ?, title = ?, mu_url = ?,
+		year = ?, pub_status = ?, type = ?, completed = ?, cover_file = ?, cover_url = ?, mu_rating = ?,
+		mu_votes = ?, al_rating = ?, details_refreshed_at = ? WHERE id = ?`,
+		sr.MDID, sr.ALID, sr.MALID, sr.Title, sr.MUURL, sr.Year, sr.PubStatus, sr.Type, sr.Completed,
+		sr.CoverFile, sr.CoverURL, sr.MURating, sr.MUVotes, sr.ALRating, fmtTime(sr.DetailsRefreshedAt), sr.ID)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return ErrNotFound
+	}
+	titles, err := replaceAltTitles(ctx, tx, sr.ID, sr.Title, sr.AltTitles)
+	if err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	sr.AltTitles = titles
+	return nil
+}
+
+func replaceAltTitles(ctx context.Context, tx *sql.Tx, seriesID int64, title string, alts []string) ([]string, error) {
+	if _, err := tx.ExecContext(ctx, "DELETE FROM alt_titles WHERE series_id = ?", seriesID); err != nil {
+		return nil, err
 	}
 	seen := map[string]bool{}
 	titles := []string{}
-	for _, t := range append([]string{sr.Title}, sr.AltTitles...) {
+	for _, t := range append([]string{title}, alts...) {
 		t = strings.TrimSpace(t)
 		n := textnorm.Normalize(t)
 		if t == "" || n == "" || seen[t] {
@@ -93,16 +137,12 @@ func (s *Store) UpsertSeries(ctx context.Context, sr *Series) error {
 		}
 		seen[t] = true
 		if _, err := tx.ExecContext(ctx, "INSERT INTO alt_titles(series_id, pos, title, normalized) VALUES(?,?,?,?)",
-			sr.ID, len(titles), t, n); err != nil {
-			return err
+			seriesID, len(titles), t, n); err != nil {
+			return nil, err
 		}
 		titles = append(titles, t)
 	}
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-	sr.AltTitles = titles
-	return nil
+	return titles, nil
 }
 
 func (s *Store) altTitles(ctx context.Context, seriesID int64) ([]string, error) {

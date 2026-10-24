@@ -7,7 +7,8 @@ chaptermark-export*.json
 
 # Build output
 build/bin/
-frontend/dist/
+frontend/dist/*
+!frontend/dist/gitkeep
 frontend/node_modules/
 frontend/package.json.md5
 
@@ -19,3 +20,6 @@ frontend/package.json.md5
 Thumbs.db
 .vscode/
 .idea/
+
+# Dependencies
+node_modules/

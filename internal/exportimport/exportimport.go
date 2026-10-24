@@ -110,6 +110,9 @@ func Import(ctx context.Context, st *store.Store, r io.Reader, mode Mode) (Resul
 			if err := st.SaveEntry(ctx, it.Entry); err != nil {
 				return res, err
 			}
+			if err := st.SetSeriesTags(ctx, it.Entry.SeriesID, it.Entry.Tags); err != nil {
+				return res, err
+			}
 			res.Updated++
 			continue
 		}
@@ -122,6 +125,9 @@ func Import(ctx context.Context, st *store.Store, r io.Reader, mode Mode) (Resul
 		}
 		it.Entry.SeriesID = sr.ID
 		if err := st.SaveEntry(ctx, it.Entry); err != nil {
+			return res, err
+		}
+		if err := st.SetSeriesTags(ctx, it.Entry.SeriesID, it.Entry.Tags); err != nil {
 			return res, err
 		}
 		res.Added++

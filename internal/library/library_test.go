@@ -3,7 +3,10 @@ package library
 import (
 	"context"
 	"errors"
+	"fmt"
 	"path/filepath"
+	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -203,6 +206,63 @@ func TestSearchLocalAndRemove(t *testing.T) {
 	}
 	if items, _ := svc.List(ctx); len(items) != 0 {
 		t.Fatalf("%d items after remove", len(items))
+	}
+}
+
+func TestReleaseRhythmIsStored(t *testing.T) {
+	svc, mu, _, _ := newService(t)
+	ctx := context.Background()
+	mu.Releases[libtest.ORVID] = mangaupdates.Release{Chapter: 311, Raw: "311", Date: "2026-05-19", IntervalDays: 7, LastReleaseDate: "2026-06-02"}
+	v, err := svc.Add(ctx, libtest.ORVID, AddInput{Status: store.StatusReading})
+	if err != nil || v.Series.ReleaseIntervalDays != 7 || v.Series.LastReleaseDate != "2026-06-02" {
+		t.Fatalf("after add: %v days, %q, %v", v.Series.ReleaseIntervalDays, v.Series.LastReleaseDate, err)
+	}
+	mu.Releases[libtest.ORVID] = mangaupdates.Release{Chapter: 312, Raw: "312", Date: "2026-06-16", IntervalDays: 14, LastReleaseDate: "2026-06-16"}
+	if err := svc.RefreshLatest(ctx, v.Series.ID); err != nil {
+		t.Fatal(err)
+	}
+	v, _ = svc.Get(ctx, v.Series.ID)
+	if v.Series.ReleaseIntervalDays != 14 || v.Series.LastReleaseDate != "2026-06-16" {
+		t.Fatalf("after refresh: %v days, %q", v.Series.ReleaseIntervalDays, v.Series.LastReleaseDate)
+	}
+}
+
+func TestUpdateEntrySetsTags(t *testing.T) {
+	svc, _, _, _ := newService(t)
+	ctx := context.Background()
+	v, _ := svc.Add(ctx, libtest.ORVID, AddInput{Status: store.StatusReading})
+	v, err := svc.UpdateEntry(ctx, v.Series.ID, EntryUpdate{Status: store.StatusReading, Tags: []string{"Favourites", "Binge later"}})
+	if err != nil || !reflect.DeepEqual(v.Entry.Tags, []string{"Binge later", "Favourites"}) {
+		t.Fatalf("tags = %v, %v", v.Entry.Tags, err)
+	}
+	tags, _ := svc.Tags(ctx)
+	if len(tags) != 2 {
+		t.Fatalf("Tags() = %v", tags)
+	}
+	if err := svc.RenameTag(ctx, tags[1].ID, "Faves"); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.DeleteTag(ctx, tags[0].ID); err != nil {
+		t.Fatal(err)
+	}
+	v, _ = svc.Get(ctx, v.Series.ID)
+	if !reflect.DeepEqual(v.Entry.Tags, []string{"Faves"}) {
+		t.Fatalf("after rename/delete: %v", v.Entry.Tags)
+	}
+}
+
+func TestUpdateEntryRejectsBadTags(t *testing.T) {
+	svc, _, _, _ := newService(t)
+	ctx := context.Background()
+	v, _ := svc.Add(ctx, libtest.ORVID, AddInput{Status: store.StatusReading})
+	many := make([]string, 21)
+	for i := range many {
+		many[i] = fmt.Sprintf("tag %d", i)
+	}
+	for _, tags := range [][]string{many, {strings.Repeat("x", 41)}} {
+		if _, err := svc.UpdateEntry(ctx, v.Series.ID, EntryUpdate{Status: store.StatusReading, Tags: tags}); err == nil {
+			t.Errorf("tags %d x %d chars should be refused", len(tags), len(tags[0]))
+		}
 	}
 }
 

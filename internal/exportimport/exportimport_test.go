@@ -73,6 +73,31 @@ func TestRoundTrip(t *testing.T) {
 	}
 }
 
+func TestTagsSurviveExportAndImport(t *testing.T) {
+	ctx := context.Background()
+	src := newStore(t)
+	track(t, src, 1, "Eleceed", 330, t1)
+	items, _ := src.ListItems(ctx)
+	if err := src.SetSeriesTags(ctx, items[0].Series.ID, []string{"Favourites", "Binge later"}); err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	if err := Export(ctx, src, &buf, t2); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(buf.String(), `"Favourites"`) {
+		t.Fatal("tags missing from the export file")
+	}
+	dst := newStore(t)
+	if _, err := Import(ctx, dst, &buf, ModeReplace); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := dst.ListItems(ctx)
+	if len(got) != 1 || strings.Join(got[0].Entry.Tags, ",") != "Binge later,Favourites" {
+		t.Fatalf("imported tags = %v", got[0].Entry.Tags)
+	}
+}
+
 func TestMergeKeepsNewer(t *testing.T) {
 	src := newStore(t)
 	track(t, src, 1, "Eleceed", 340, t2) // newer than dst's

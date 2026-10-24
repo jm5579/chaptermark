@@ -3,6 +3,7 @@ package mangaupdates
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -92,6 +93,37 @@ func TestLatestReleasePicksHighest(t *testing.T) {
 	if fs.lastRelBody["orderby"] != "date" || fs.lastRelBody["asc"] != "desc" ||
 		fs.lastRelBody["search"] != "50369844984" || fs.lastRelBody["search_type"] != "series" {
 		t.Fatalf("request body = %v", fs.lastRelBody)
+	}
+}
+
+func TestLatestReleaseRhythm(t *testing.T) {
+	c := newTestClient(t, &fixtureServer{releases: "releases_orv.json"})
+	rel, ok, err := c.LatestRelease(context.Background(), 50369844984)
+	if err != nil || !ok {
+		t.Fatalf("LatestRelease: ok=%v err=%v", ok, err)
+	}
+	// Earliest releases of chapters 311..301 give 10 gaps (6,6,7,7,7,8,8,13,14,14); the median is 7.5.
+	if rel.IntervalDays != 7.5 || rel.LastReleaseDate != "2026-06-02" {
+		t.Fatalf("rhythm = %v days, last release %q", rel.IntervalDays, rel.LastReleaseDate)
+	}
+}
+
+func TestReleaseInterval(t *testing.T) {
+	weekly := []dated{}
+	for ch := 10; ch >= 1; ch-- {
+		weekly = append(weekly, dated{float64(ch), fmt.Sprintf("2026-03-%02d", 1+(ch-1)*2)})
+	}
+	if got := releaseInterval(weekly); got != 2 {
+		t.Errorf("every-other-day series = %v, want 2", got)
+	}
+	// Several groups releasing the same chapter on different days count once,
+	// at the earliest date.
+	dupes := []dated{{3, "2026-01-15"}, {3, "2026-01-29"}, {2, "2026-01-08"}, {2, "2026-01-20"}, {1, "2026-01-01"}, {4, "2026-01-22"}}
+	if got := releaseInterval(dupes); got != 7 {
+		t.Errorf("with duplicates = %v, want 7", got)
+	}
+	if got := releaseInterval([]dated{{2, "2026-01-08"}, {1, "2026-01-01"}}); got != 0 {
+		t.Errorf("too few releases should be unknown (0), got %v", got)
 	}
 }
 

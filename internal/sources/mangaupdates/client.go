@@ -4,8 +4,10 @@ package mangaupdates
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jm5579/chaptermark/internal/chapters"
 	"github.com/jm5579/chaptermark/internal/httpx"
@@ -49,6 +51,56 @@ type Release struct {
 	Raw     string
 	Group   string
 	Date    string
+	// Release rhythm from the same list: typical days between new chapters
+	// (0 = not enough data) and the date of the most recent release.
+	IntervalDays    float64
+	LastReleaseDate string
+}
+
+// dated is one release: a chapter number and its release date (YYYY-MM-DD).
+type dated struct {
+	chapter float64
+	date    string
+}
+
+// releaseInterval is the median number of days between the 10 most recent new
+// chapters. Each chapter counts once, at the earliest date any group released
+// it, so official releases that lag behind scanlations don't skew it.
+func releaseInterval(releases []dated) float64 {
+	first := map[float64]string{}
+	for _, r := range releases {
+		if d, ok := first[r.chapter]; !ok || r.date < d {
+			first[r.chapter] = r.date
+		}
+	}
+	chs := make([]float64, 0, len(first))
+	for ch := range first {
+		chs = append(chs, ch)
+	}
+	sort.Sort(sort.Reverse(sort.Float64Slice(chs)))
+	if len(chs) > 11 {
+		chs = chs[:11]
+	}
+	var gaps []float64
+	for i := 0; i+1 < len(chs); i++ {
+		newer, err1 := time.Parse("2006-01-02", first[chs[i]])
+		older, err2 := time.Parse("2006-01-02", first[chs[i+1]])
+		if err1 != nil || err2 != nil {
+			continue
+		}
+		if days := newer.Sub(older).Hours() / 24; days > 0 {
+			gaps = append(gaps, days)
+		}
+	}
+	if len(gaps) < 3 {
+		return 0
+	}
+	sort.Float64s(gaps)
+	mid := len(gaps) / 2
+	if len(gaps)%2 == 1 {
+		return gaps[mid]
+	}
+	return (gaps[mid-1] + gaps[mid]) / 2
 }
 
 type image struct {
@@ -163,8 +215,16 @@ func (c *Client) LatestRelease(ctx context.Context, id int64) (Release, bool, er
 	}
 	var best Release
 	found := false
+	var all []dated
+	lastRelease := ""
 	for _, r := range resp.Results {
+		if r.Record.ReleaseDate > lastRelease {
+			lastRelease = r.Record.ReleaseDate
+		}
 		n, ok := chapters.Parse(r.Record.Chapter)
+		if ok {
+			all = append(all, dated{n, r.Record.ReleaseDate})
+		}
 		if !ok || (found && n <= best.Chapter) {
 			continue
 		}
@@ -175,5 +235,7 @@ func (c *Client) LatestRelease(ctx context.Context, id int64) (Release, bool, er
 		best = Release{Chapter: n, Raw: r.Record.Chapter, Group: strings.Join(names, " & "), Date: r.Record.ReleaseDate}
 		found = true
 	}
+	best.IntervalDays = releaseInterval(all)
+	best.LastReleaseDate = lastRelease
 	return best, found, nil
 }

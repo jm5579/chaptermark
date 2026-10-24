@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/jm5579/chaptermark/internal/sources/mangadex"
@@ -60,6 +61,7 @@ type EntryUpdate struct {
 	ReadURL      string           `json:"readUrl"`
 	TypeOverride store.SeriesType `json:"typeOverride"`
 	LatestManual *float64         `json:"latestManual"`
+	Tags         []string         `json:"tags"`
 }
 
 func (s *Service) now() time.Time {
@@ -236,6 +238,7 @@ func (s *Service) Add(ctx context.Context, muID int64, in AddInput) (ItemView, e
 		sr.ChaptersCheckedAt = now
 		if ok {
 			sr.LatestChapter, sr.LatestRaw, sr.LatestGroup, sr.LatestDate = rel.Chapter, rel.Raw, rel.Group, rel.Date
+			sr.ReleaseIntervalDays, sr.LastReleaseDate = rel.IntervalDays, rel.LastReleaseDate
 		}
 	}
 	if err := s.Store.UpsertSeries(ctx, &sr); err != nil {
@@ -268,6 +271,9 @@ func (s *Service) UpdateEntry(ctx context.Context, seriesID int64, in EntryUpdat
 	if in.LatestManual != nil && *in.LatestManual < 0 {
 		return ItemView{}, fmt.Errorf("latest chapter can't be negative")
 	}
+	if err := validateTags(in.Tags); err != nil {
+		return ItemView{}, err
+	}
 	it, err := s.Store.GetItem(ctx, seriesID)
 	if err != nil {
 		return ItemView{}, err
@@ -296,8 +302,43 @@ func (s *Service) UpdateEntry(ctx context.Context, seriesID int64, in EntryUpdat
 	if err := s.Store.SetLatestManual(ctx, seriesID, in.LatestManual); err != nil {
 		return ItemView{}, err
 	}
+	if err := s.Store.SetSeriesTags(ctx, seriesID, in.Tags); err != nil {
+		return ItemView{}, err
+	}
 	return s.Get(ctx, seriesID)
 }
+
+const (
+	maxTagsPerSeries = 20
+	maxTagLength     = 40
+)
+
+func validateTags(tags []string) error {
+	clean := store.CleanTagNames(tags)
+	if len(clean) > maxTagsPerSeries {
+		return fmt.Errorf("a series can have at most %d tags", maxTagsPerSeries)
+	}
+	for _, t := range clean {
+		if len([]rune(t)) > maxTagLength {
+			return fmt.Errorf("tag names can be at most %d characters", maxTagLength)
+		}
+	}
+	return nil
+}
+
+// Tags lists the owner's tags with how many series use each.
+func (s *Service) Tags(ctx context.Context) ([]store.Tag, error) { return s.Store.ListTags(ctx) }
+
+// RenameTag renames a tag (merging into an existing tag of the same name).
+func (s *Service) RenameTag(ctx context.Context, id int64, name string) error {
+	if len([]rune(strings.TrimSpace(name))) > maxTagLength {
+		return fmt.Errorf("tag names can be at most %d characters", maxTagLength)
+	}
+	return s.Store.RenameTag(ctx, id, name)
+}
+
+// DeleteTag removes a tag from every series.
+func (s *Service) DeleteTag(ctx context.Context, id int64) error { return s.Store.DeleteTag(ctx, id) }
 
 func (s *Service) Remove(ctx context.Context, seriesID int64) error {
 	it, err := s.Store.GetItem(ctx, seriesID)
@@ -343,9 +384,11 @@ func (s *Service) RefreshLatest(ctx context.Context, seriesID int64) error {
 	if err != nil {
 		return err
 	}
-	l := store.Latest{Chapter: it.Series.LatestChapter, Raw: it.Series.LatestRaw, Group: it.Series.LatestGroup, Date: it.Series.LatestDate}
+	l := store.Latest{Chapter: it.Series.LatestChapter, Raw: it.Series.LatestRaw, Group: it.Series.LatestGroup, Date: it.Series.LatestDate,
+		IntervalDays: it.Series.ReleaseIntervalDays, LastReleaseDate: it.Series.LastReleaseDate}
 	if ok {
-		l = store.Latest{Chapter: rel.Chapter, Raw: rel.Raw, Group: rel.Group, Date: rel.Date}
+		l = store.Latest{Chapter: rel.Chapter, Raw: rel.Raw, Group: rel.Group, Date: rel.Date,
+			IntervalDays: rel.IntervalDays, LastReleaseDate: rel.LastReleaseDate}
 	}
 	return s.Store.SetLatest(ctx, seriesID, l, s.now())
 }

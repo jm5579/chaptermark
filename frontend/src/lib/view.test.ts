@@ -77,9 +77,12 @@ describe('pickAltTitles', () => {
         // Without them, the heuristic still applies.
         expect(pickAltTitles('Eleceed', alts, 'manhwa', {romanized: '', native: ''}))
             .toEqual(['Electricidad veloz', '일렉시드'])
-        // A romanized title equal to the main title isn't repeated.
+        // Only the native title is known: show just that, never a guessed translation.
+        expect(pickAltTitles('Eleceed', alts, 'manhwa', {romanized: '', native: '일렉시드'}))
+            .toEqual(['일렉시드'])
+        // A romanized title equal to the main title isn't repeated (and nothing is guessed instead).
         expect(pickAltTitles('Kingdom', ['Kingudamu', 'キングダム'], 'manga', {romanized: 'Kingdom', native: 'キングダム'}))
-            .toEqual(['Kingudamu', 'キングダム'])
+            .toEqual(['キングダム'])
     })
 
     it('falls back to the remaining names in order', () => {

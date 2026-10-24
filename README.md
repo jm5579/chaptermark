@@ -75,6 +75,11 @@ git tag v1.0.0 && git push origin v1.0.0
 
 ChapterMark uses the free public APIs of [MangaUpdates](https://api.mangaupdates.com), [MangaDex](https://api.mangadex.org/docs/) and [AniList](https://docs.anilist.co) — no accounts or keys. It identifies itself with a `ChapterMark/1.0` User-Agent and spaces out its requests (about one per second to MangaUpdates).
 
+## History
+
+- **v2.0.0 — ChapterMark:** this portable Windows app (Go + Wails + React), a rewrite of the original tracker.
+- **v1.0.0 — the original Python manga tracker.** Its code is kept in the repository history; see it with `git checkout v1.0.0`.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).

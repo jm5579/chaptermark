@@ -13,8 +13,75 @@ import (
 	"github.com/jm5579/chaptermark/internal/httpx"
 )
 
+// allowLocalTestServer lets downloads reach the plain-HTTP 127.0.0.1 test
+// servers for the duration of a test; production only allows the HTTPS image hosts.
+func allowLocalTestServer(t *testing.T) {
+	t.Helper()
+	oldHosts, oldHTTPS := allowedHosts, requireHTTPS
+	allowedHosts = map[string]bool{"127.0.0.1": true}
+	requireHTTPS = false
+	t.Cleanup(func() { allowedHosts, requireHTTPS = oldHosts, oldHTTPS })
+}
+
+func TestAllowedURL(t *testing.T) {
+	for _, ok := range []string{
+		"https://cdn.mangaupdates.com/image/i519012.jpg",
+		"https://uploads.mangadex.org/covers/9a414441/be18dc9a.jpg.512.jpg",
+		"https://CDN.MangaUpdates.com/image/x.jpg",
+	} {
+		if err := AllowedURL(ok); err != nil {
+			t.Errorf("AllowedURL(%q) = %v, want allowed", ok, err)
+		}
+	}
+	for _, bad := range []string{
+		"http://cdn.mangaupdates.com/image/x.jpg",         // not HTTPS
+		"https://evil.example/x.jpg",                      // unknown host
+		"https://cdn.mangaupdates.com.evil.example/x.jpg", // look-alike host
+		"https://192.168.1.1/admin",                       // home network
+		"https://127.0.0.1:8080/x.jpg",
+		"file:///C:/Windows/win.ini",
+		"",
+		"::not a url::",
+	} {
+		if err := AllowedURL(bad); err == nil {
+			t.Errorf("AllowedURL(%q) = nil, want refused", bad)
+		}
+	}
+}
+
+func TestDownloadRefusesDisallowedURLWithoutRequesting(t *testing.T) {
+	hit := false
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { hit = true }))
+	defer srv.Close()
+	// srv is plain HTTP on 127.0.0.1, which production rules don't allow.
+	if _, err := Download(context.Background(), httpx.New(0), srv.URL+"/x.jpg", t.TempDir(), 7); err == nil {
+		t.Fatal("expected the URL to be refused")
+	}
+	if hit {
+		t.Fatal("a refused URL must not be requested at all")
+	}
+}
+
+func TestCheckRedirect(t *testing.T) {
+	to := func(raw string) *http.Request {
+		r, _ := http.NewRequest("GET", raw, nil)
+		return r
+	}
+	if err := CheckRedirect(to("https://uploads.mangadex.org/covers/a/b.jpg"), nil); err != nil {
+		t.Errorf("redirect to an image host refused: %v", err)
+	}
+	if err := CheckRedirect(to("http://192.168.0.1/"), nil); err == nil {
+		t.Error("redirect to the home network allowed")
+	}
+	via := make([]*http.Request, 5)
+	if err := CheckRedirect(to("https://cdn.mangaupdates.com/x.jpg"), via); err == nil {
+		t.Error("more than 5 redirects allowed")
+	}
+}
+
 func imageServer(t *testing.T, contentType string) string {
 	t.Helper()
+	allowLocalTestServer(t)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", contentType)
 		w.Write([]byte("IMG"))

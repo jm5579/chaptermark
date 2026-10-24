@@ -3,8 +3,10 @@ package covers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -15,6 +17,47 @@ import (
 )
 
 var validName = regexp.MustCompile(`^\d+\.(jpg|png|webp)$`)
+
+// Covers are only fetched over HTTPS from the image hosts the data sources
+// actually use. Cover URLs come from API responses and import files, so this
+// stops a bad response from making the app request other places (like
+// devices on the local network).
+var (
+	allowedHosts = map[string]bool{
+		"cdn.mangaupdates.com": true, // MangaUpdates
+		"uploads.mangadex.org": true, // MangaDex
+	}
+	requireHTTPS = true
+)
+
+var ErrURLNotAllowed = errors.New("cover URL not allowed")
+
+// AllowedURL reports whether a cover may be downloaded from raw.
+func AllowedURL(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrURLNotAllowed, err)
+	}
+	switch {
+	case u.Scheme == "https":
+	case u.Scheme == "http" && !requireHTTPS:
+	default:
+		return fmt.Errorf("%w: scheme %q", ErrURLNotAllowed, u.Scheme)
+	}
+	if !allowedHosts[strings.ToLower(u.Hostname())] {
+		return fmt.Errorf("%w: host %q", ErrURLNotAllowed, u.Hostname())
+	}
+	return nil
+}
+
+// CheckRedirect is an http.Client.CheckRedirect that applies AllowedURL to
+// every redirect target, so an allowed host can't bounce the request elsewhere.
+func CheckRedirect(req *http.Request, via []*http.Request) error {
+	if len(via) >= 5 {
+		return errors.New("too many redirects")
+	}
+	return AllowedURL(req.URL.String())
+}
 
 func extFor(contentType string) (string, error) {
 	ct := strings.ToLower(strings.TrimSpace(strings.SplitN(contentType, ";", 2)[0]))
@@ -32,6 +75,9 @@ func extFor(contentType string) (string, error) {
 // Download saves the image at url as <seriesID>.<ext> in dir, replacing any
 // earlier cover for that series, and returns the file name.
 func Download(ctx context.Context, c *httpx.Client, url, dir string, seriesID int64) (string, error) {
+	if err := AllowedURL(url); err != nil {
+		return "", err
+	}
 	data, contentType, err := c.GetBytes(ctx, url)
 	if err != nil {
 		return "", err

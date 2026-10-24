@@ -201,6 +201,7 @@ func (a *App) setup() error {
 
 	coversDir := filepath.Join(a.dataDir, "covers")
 	coverHTTP := httpx.New(250 * time.Millisecond)
+	coverHTTP.HTTP.CheckRedirect = covers.CheckRedirect // redirects must stay on the image hosts
 	a.lib = &library.Service{
 		Store: st,
 		MU:    &mangaupdates.Client{HTTP: httpx.New(time.Second)},

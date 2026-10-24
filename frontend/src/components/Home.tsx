@@ -75,7 +75,7 @@ export function SeriesRow({it, now, onOpen}: { it: ItemView; now: Date; onOpen: 
     const pct = latest > 0 ? Math.min(100, (mine / latest) * 100) : 0
     const isPlan = it.entry.status === 'plan'
     return (
-        <button className="series-row" onClick={() => onOpen(it.series.id)}>
+        <button className="series-row" onClick={() => onOpen(it.series.id)} aria-label={it.series.title}>
             <Cover file={it.series.coverFile} title={it.series.title} seed={it.series.id} className="thumb"/>
             <span className="row-title">
                 <span className="t">{it.series.title}</span>

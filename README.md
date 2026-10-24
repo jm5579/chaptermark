@@ -123,7 +123,7 @@ ChapterMark uses the free public APIs of [MangaUpdates](https://api.mangaupdates
 
 <br>
 
-You need [Go](https://go.dev/dl/) 1.23 or newer, [Node.js](https://nodejs.org) 20 or newer, and the Wails CLI:
+You need [Go](https://go.dev/dl/) 1.26 or newer, [Node.js](https://nodejs.org) 20 or newer, and the Wails CLI:
 
 ```bash
 go install github.com/wailsapp/wails/v2/cmd/wails@v2.17.0

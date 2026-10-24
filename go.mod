@@ -2,6 +2,8 @@ module github.com/jm5579/chaptermark
 
 go 1.26.0
 
+toolchain go1.27.3
+
 require (
 	github.com/wailsapp/wails/v2 v2.17.0
 	golang.org/x/text v0.43.0
@@ -36,8 +38,8 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	github.com/wailsapp/go-webview2 v1.0.22 // indirect
-	golang.org/x/crypto v0.53.0 // indirect
-	golang.org/x/net v0.56.0 // indirect
+	golang.org/x/crypto v0.58.0 // indirect
+	golang.org/x/net v0.61.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
 	modernc.org/libc v1.79.0 // indirect
 	modernc.org/mathutil v1.7.1 // indirect

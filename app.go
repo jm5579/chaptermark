@@ -92,6 +92,13 @@ func (a *App) startup(ctx context.Context) {
 	if due, _ := a.checker.Due(ctx); due {
 		go a.runCheck()
 	}
+	// While the window stays open, look again every 15 minutes whether the
+	// configured interval has passed. ctx ends when the app shuts down.
+	ticker := time.NewTicker(15 * time.Minute)
+	go func() {
+		defer ticker.Stop()
+		a.checker.Watch(ctx, ticker.C, a.runCheck)
+	}()
 }
 
 // domReady restores the saved window size once the window exists.

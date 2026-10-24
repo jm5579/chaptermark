@@ -101,8 +101,10 @@ func (a *App) startup(ctx context.Context) {
 	}()
 }
 
-// domReady restores the saved window size once the window exists.
+// domReady restores the saved window size, then shows the window (it starts
+// hidden so the resize isn't visible). The window is shown on every path.
 func (a *App) domReady(ctx context.Context) {
+	defer runtime.WindowShow(ctx)
 	if a.store == nil {
 		return
 	}

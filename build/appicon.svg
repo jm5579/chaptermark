@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a2632"/>
+      <stop offset="1" stop-color="#141218"/>
+    </linearGradient>
+    <linearGradient id="ribbon" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffa07a"/>
+      <stop offset="1" stop-color="#ff6b35"/>
+    </linearGradient>
+  </defs>
+  <rect x="40" y="40" width="944" height="944" rx="210" fill="url(#bg)"/>
+  <rect x="40" y="40" width="944" height="944" rx="210" fill="none" stroke="#3a3542" stroke-width="12"/>
+  <!-- page lines behind the bookmark -->
+  <rect x="230" y="250" width="360" height="40" rx="20" fill="#3a3542"/>
+  <rect x="230" y="340" width="300" height="40" rx="20" fill="#3a3542"/>
+  <rect x="230" y="430" width="330" height="40" rx="20" fill="#3a3542"/>
+  <!-- bookmark ribbon -->
+  <path d="M600 150 H800 V850 L700 760 L600 850 Z" fill="url(#ribbon)"/>
+  <!-- check mark -->
+  <path d="M642 420 L688 470 L762 380" fill="none" stroke="#141218" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

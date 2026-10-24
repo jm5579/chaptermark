@@ -66,7 +66,8 @@ export function StatusTabs({value, counts, onChange}: {
 }
 
 function altLine(it: ItemView): string {
-    return pickAltTitles(it.series.title, it.series.altTitles, it.effectiveType).join(' · ')
+    return pickAltTitles(it.series.title, it.series.altTitles, it.effectiveType,
+        {romanized: it.series.romanizedTitle, native: it.series.nativeTitle}).join(' · ')
 }
 
 export function SeriesRow({it, now, onOpen}: { it: ItemView; now: Date; onOpen: (id: number) => void }) {

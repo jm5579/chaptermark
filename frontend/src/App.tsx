@@ -6,6 +6,7 @@ import {TopBar} from './components/TopBar'
 import {EmptyState, SeriesRow, Shelf, StatusTabs, TypeSwitch} from './components/Home'
 import {SearchPanel} from './components/SearchPanel'
 import {AddDialog} from './components/AddDialog'
+import {DetailPanel} from './components/DetailPanel'
 
 function upsert(items: ItemView[], v: ItemView): ItemView[] {
     const i = items.findIndex(x => x.series.id === v.series.id)
@@ -64,6 +65,7 @@ function App() {
     }
 
     const view = useMemo(() => selectView(items, type, tab), [items, type, tab])
+    const openItem = openId === null ? undefined : items.find(x => x.series.id === openId)
 
     if (!init) return <div className="splash">ChapterMark</div>
     if (!init.ready) {
@@ -99,7 +101,15 @@ function App() {
             </main>
             {adding && <AddDialog result={adding} onClose={() => setAdding(null)} onAdded={onAdded}/>}
             {toast && <div className="toast" role="status">{toast}</div>}
-            {openId !== null && null}
+            {openItem && (
+                <DetailPanel item={openItem} now={now} onClose={() => setOpenId(null)}
+                             onChange={v => setItems(prev => upsert(prev, v))}
+                             onRemoved={id => {
+                                 setItems(prev => prev.filter(x => x.series.id !== id))
+                                 setOpenId(null)
+                                 setToast(`Removed ${openItem.series.title}`)
+                             }}/>
+            )}
         </div>
     )
 }

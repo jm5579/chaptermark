@@ -167,3 +167,31 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); }
 .rating-input button { width: 30px; height: 30px; padding: 0; border-radius: 7px; font-size: 13px; color: var(--muted); }
 .rating-input button.on { background: #3d3420; color: var(--star); font-weight: 700; }
 .rating-label { margin-left: 8px; color: var(--muted); font-size: 12px; }
+
+/* ---- Detail panel ---- */
+.panel-backdrop { position: fixed; inset: 0; background: #0007; z-index: 70; display: flex; justify-content: flex-end; animation: fade .12s ease-out; }
+.panel { width: min(440px, 100vw); height: 100%; overflow-y: auto; background: var(--surface); border-left: 1px solid var(--border); padding: 20px 22px 28px; position: relative; animation: slide-in .16s ease-out; box-shadow: -16px 0 40px #0008; }
+@keyframes slide-in { from { transform: translateX(40px); opacity: .4; } to { transform: none; opacity: 1; } }
+.panel-close { position: absolute; top: 12px; right: 12px; }
+.panel-head { display: flex; gap: 16px; margin-bottom: 8px; padding-right: 28px; }
+.panel-cover { width: 110px; height: 156px; }
+.panel-head-text { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.panel-head-text h2 { margin: 0; font-size: 18px; line-height: 1.25; }
+.panel-section { border-top: 1px solid var(--border); padding: 14px 0 4px; margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.panel-section h3 { margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); font-weight: 600; }
+.inline-field { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
+.inline-field input { width: 150px; }
+.chapter-stepper { display: flex; align-items: center; gap: 8px; }
+.chapter-stepper input { width: 100px; text-align: center; font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.chapter-stepper button { min-width: 44px; font-weight: 700; }
+.url-row { display: flex; gap: 8px; }
+.url-row input { flex: 1; min-width: 0; }
+.panel textarea { resize: vertical; }
+.ratings { display: flex; gap: 18px; }
+.ratings b { color: var(--text); }
+button.link { align-self: flex-start; color: var(--accent); padding: 4px 0; }
+button.link:hover { background: transparent; text-decoration: underline; }
+.alt-titles { display: flex; flex-wrap: wrap; gap: 6px; }
+.alt-titles .pill { font-size: 12px; padding: 3px 8px; }
+.danger-zone { align-items: flex-start; }
+.confirm { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }

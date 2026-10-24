@@ -70,6 +70,18 @@ describe('pickAltTitles', () => {
         expect(pickAltTitles('MP', ['Wu Lian Dian Feng', '武炼巅峰'], 'manhua')).toEqual(['Wu Lian Dian Feng', '武炼巅峰'])
     })
 
+    it('uses the language-tagged titles from MangaDex when known', () => {
+        const alts = ['Electricidad veloz', 'Velocidad eléctrica', '일렉시드']
+        expect(pickAltTitles('Eleceed', alts, 'manhwa', {romanized: 'Illeksideu', native: '일렉시드'}))
+            .toEqual(['Illeksideu', '일렉시드'])
+        // Without them, the heuristic still applies.
+        expect(pickAltTitles('Eleceed', alts, 'manhwa', {romanized: '', native: ''}))
+            .toEqual(['Electricidad veloz', '일렉시드'])
+        // A romanized title equal to the main title isn't repeated.
+        expect(pickAltTitles('Kingdom', ['Kingudamu', 'キングダム'], 'manga', {romanized: 'Kingdom', native: 'キングダム'}))
+            .toEqual(['Kingudamu', 'キングダム'])
+    })
+
     it('falls back to the remaining names in order', () => {
         expect(pickAltTitles('Kingdom', ['Kingdom', 'El Reino', 'Kingudamu'])).toEqual(['Kingudamu', 'El Reino'])
         expect(pickAltTitles('X', ['X'])).toEqual([])

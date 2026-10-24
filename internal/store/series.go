@@ -13,7 +13,7 @@ import (
 const seriesCols = `s.id, s.mu_id, s.md_id, s.al_id, s.mal_id, s.title, s.mu_url, s.year, s.pub_status,
 	s.type, s.type_override, s.completed, s.cover_file, s.cover_url, s.mu_rating, s.mu_votes, s.al_rating,
 	s.latest_chapter, s.latest_raw, s.latest_group, s.latest_date, s.latest_manual,
-	s.details_refreshed_at, s.chapters_checked_at`
+	s.details_refreshed_at, s.chapters_checked_at, s.romanized_title, s.native_title`
 
 const entryCols = `e.series_id, e.status, e.my_chapter, e.my_rating, e.notes, e.read_url,
 	e.last_read_at, e.added_at, e.updated_at`
@@ -27,7 +27,8 @@ func scanItem(row scanner, withEntry bool) (Item, error) {
 	var detailsAt, checkedAt string
 	dest := []any{&sr.ID, &sr.MUID, &sr.MDID, &sr.ALID, &sr.MALID, &sr.Title, &sr.MUURL, &sr.Year, &sr.PubStatus,
 		&sr.Type, &sr.TypeOverride, &sr.Completed, &sr.CoverFile, &sr.CoverURL, &sr.MURating, &sr.MUVotes, &sr.ALRating,
-		&sr.LatestChapter, &sr.LatestRaw, &sr.LatestGroup, &sr.LatestDate, &manual, &detailsAt, &checkedAt}
+		&sr.LatestChapter, &sr.LatestRaw, &sr.LatestGroup, &sr.LatestDate, &manual, &detailsAt, &checkedAt,
+		&sr.RomanizedTitle, &sr.NativeTitle}
 	e := &it.Entry
 	var lastRead, added, updated string
 	if withEntry {
@@ -62,8 +63,9 @@ func (s *Store) UpsertSeries(ctx context.Context, sr *Series) error {
 	defer tx.Rollback()
 	err = tx.QueryRowContext(ctx, `INSERT INTO series (mu_id, md_id, al_id, mal_id, title, mu_url, year, pub_status,
 		type, type_override, completed, cover_file, cover_url, mu_rating, mu_votes, al_rating,
-		latest_chapter, latest_raw, latest_group, latest_date, latest_manual, details_refreshed_at, chapters_checked_at)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+		latest_chapter, latest_raw, latest_group, latest_date, latest_manual, details_refreshed_at, chapters_checked_at,
+		romanized_title, native_title)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 		ON CONFLICT(mu_id) DO UPDATE SET md_id=excluded.md_id, al_id=excluded.al_id, mal_id=excluded.mal_id,
 		title=excluded.title, mu_url=excluded.mu_url, year=excluded.year, pub_status=excluded.pub_status,
 		type=excluded.type, type_override=excluded.type_override, completed=excluded.completed,
@@ -71,12 +73,13 @@ func (s *Store) UpsertSeries(ctx context.Context, sr *Series) error {
 		mu_votes=excluded.mu_votes, al_rating=excluded.al_rating, latest_chapter=excluded.latest_chapter,
 		latest_raw=excluded.latest_raw, latest_group=excluded.latest_group, latest_date=excluded.latest_date,
 		latest_manual=excluded.latest_manual, details_refreshed_at=excluded.details_refreshed_at,
-		chapters_checked_at=excluded.chapters_checked_at
+		chapters_checked_at=excluded.chapters_checked_at, romanized_title=excluded.romanized_title,
+		native_title=excluded.native_title
 		RETURNING id`,
 		sr.MUID, sr.MDID, sr.ALID, sr.MALID, sr.Title, sr.MUURL, sr.Year, sr.PubStatus,
 		sr.Type, sr.TypeOverride, sr.Completed, sr.CoverFile, sr.CoverURL, sr.MURating, sr.MUVotes, sr.ALRating,
 		sr.LatestChapter, sr.LatestRaw, sr.LatestGroup, sr.LatestDate, nullable(sr.LatestManual),
-		fmtTime(sr.DetailsRefreshedAt), fmtTime(sr.ChaptersCheckedAt)).Scan(&sr.ID)
+		fmtTime(sr.DetailsRefreshedAt), fmtTime(sr.ChaptersCheckedAt), sr.RomanizedTitle, sr.NativeTitle).Scan(&sr.ID)
 	if err != nil {
 		return err
 	}
@@ -103,9 +106,10 @@ func (s *Store) UpdateDetails(ctx context.Context, sr *Series) error {
 	defer tx.Rollback()
 	res, err := tx.ExecContext(ctx, `UPDATE series SET md_id = ?, al_id = ?, mal_id = ?, title = ?, mu_url = ?,
 		year = ?, pub_status = ?, type = ?, completed = ?, cover_file = ?, cover_url = ?, mu_rating = ?,
-		mu_votes = ?, al_rating = ?, details_refreshed_at = ? WHERE id = ?`,
+		mu_votes = ?, al_rating = ?, details_refreshed_at = ?, romanized_title = ?, native_title = ? WHERE id = ?`,
 		sr.MDID, sr.ALID, sr.MALID, sr.Title, sr.MUURL, sr.Year, sr.PubStatus, sr.Type, sr.Completed,
-		sr.CoverFile, sr.CoverURL, sr.MURating, sr.MUVotes, sr.ALRating, fmtTime(sr.DetailsRefreshedAt), sr.ID)
+		sr.CoverFile, sr.CoverURL, sr.MURating, sr.MUVotes, sr.ALRating, fmtTime(sr.DetailsRefreshedAt),
+		sr.RomanizedTitle, sr.NativeTitle, sr.ID)
 	if err != nil {
 		return err
 	}

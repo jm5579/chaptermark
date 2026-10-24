@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/jm5579/chaptermark/internal/library/libtest"
+	"github.com/jm5579/chaptermark/internal/sources/mangadex"
 	"github.com/jm5579/chaptermark/internal/sources/mangaupdates"
 	"github.com/jm5579/chaptermark/internal/store"
 )
@@ -202,6 +203,34 @@ func TestSearchLocalAndRemove(t *testing.T) {
 	}
 	if items, _ := svc.List(ctx); len(items) != 0 {
 		t.Fatalf("%d items after remove", len(items))
+	}
+}
+
+func TestAddStoresLanguageTitles(t *testing.T) {
+	svc, _, _, _ := newService(t)
+	v, err := svc.Add(context.Background(), libtest.ORVID, AddInput{Status: store.StatusReading})
+	if err != nil || v.Series.RomanizedTitle != "Jeonjijeok Dokja Sijeom" || v.Series.NativeTitle != "전지적 독자 시점" {
+		t.Fatalf("titles = %q / %q, %v", v.Series.RomanizedTitle, v.Series.NativeTitle, err)
+	}
+}
+
+func TestRefreshDetailsFillsTitlesForAlreadyLinkedSeries(t *testing.T) {
+	svc, _, md, _ := newService(t)
+	ctx := context.Background()
+	// Linked to MangaDex before titles were stored (an older library).
+	full := md.Links[libtest.ORVID]
+	md.Links[libtest.ORVID] = mangadex.Links{MDID: full.MDID, ALID: full.ALID, MALID: full.MALID}
+	v, _ := svc.Add(ctx, libtest.ORVID, AddInput{Status: store.StatusReading})
+	if v.Series.MDID == "" || v.Series.RomanizedTitle != "" {
+		t.Fatalf("setup: %+v", v.Series)
+	}
+	md.Links[libtest.ORVID] = full
+	if err := svc.RefreshDetails(ctx, v.Series.ID); err != nil {
+		t.Fatal(err)
+	}
+	v, _ = svc.Get(ctx, v.Series.ID)
+	if v.Series.RomanizedTitle != "Jeonjijeok Dokja Sijeom" || v.Series.NativeTitle != "전지적 독자 시점" {
+		t.Fatalf("titles after refresh = %q / %q", v.Series.RomanizedTitle, v.Series.NativeTitle)
 	}
 }
 

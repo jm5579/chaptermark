@@ -277,6 +277,8 @@ export namespace store {
 	    alId: number;
 	    malId: number;
 	    title: string;
+	    romanizedTitle: string;
+	    nativeTitle: string;
 	    muUrl: string;
 	    year: string;
 	    pubStatus: string;
@@ -311,6 +313,8 @@ export namespace store {
 	        this.alId = source["alId"];
 	        this.malId = source["malId"];
 	        this.title = source["title"];
+	        this.romanizedTitle = source["romanizedTitle"];
+	        this.nativeTitle = source["nativeTitle"];
 	        this.muUrl = source["muUrl"];
 	        this.year = source["year"];
 	        this.pubStatus = source["pubStatus"];

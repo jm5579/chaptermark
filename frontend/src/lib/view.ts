@@ -54,11 +54,20 @@ const foreignArticle = /^(der|die|das|ein|eine|el|la|las|los|le|les|lo|il|gli|un
  * native-script name (Korean for manhwa, Japanese for manga, Chinese for
  * manhua), rather than e.g. the German or Spanish translation.
  */
-export function pickAltTitles(title: string, alts: string[] | undefined, type?: string, max = 2): string[] {
+export function pickAltTitles(
+    title: string,
+    alts: string[] | undefined,
+    type?: string,
+    known: {romanized?: string; native?: string} = {},
+    max = 2,
+): string[] {
     const others = (alts ?? []).filter(a => a !== title)
-    const latin = others.find(a => latinOnly.test(a) && !foreignArticle.test(a))
-    const preferred = type ? nativeFor[type] : undefined
-    const native = (preferred && others.find(a => preferred.test(a))) || others.find(a => nativeScript.test(a))
+    const usable = (t?: string) => (t && t !== title ? t : undefined)
+    // MangaDex's language-tagged titles are exact; the rest is a best guess.
+    const latin = usable(known.romanized) ?? others.find(a => latinOnly.test(a) && !foreignArticle.test(a))
+    const scriptRe = type ? nativeFor[type] : undefined
+    const native = usable(known.native)
+        ?? (scriptRe && others.find(a => scriptRe.test(a))) ?? others.find(a => nativeScript.test(a))
     const picked = [latin, native].filter((a): a is string => !!a)
     for (const a of others) {
         if (picked.length >= max) break

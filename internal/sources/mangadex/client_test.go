@@ -2,6 +2,7 @@ package mangadex
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -47,6 +48,36 @@ func TestFindByMUMatchesLink(t *testing.T) {
 	}
 	if q == "" {
 		t.Fatal("no query sent")
+	}
+	if links.Romanized != "Jeonjijeok Dokja Sijeom" || links.Native != "전지적 독자 시점" {
+		t.Fatalf("titles = %q / %q", links.Romanized, links.Native)
+	}
+}
+
+func TestByID(t *testing.T) {
+	var search struct {
+		Data []json.RawMessage `json:"data"`
+	}
+	b, _ := os.ReadFile("testdata/search_orv.json")
+	json.Unmarshal(b, &search)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/manga/9a414441-bbad-43f1-a3a7-dc262ca790a3" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Write(append(append([]byte(`{"result":"ok","data":`), search.Data[0]...), '}'))
+	}))
+	defer srv.Close()
+	c := &Client{HTTP: httpx.New(0), BaseURL: srv.URL}
+	links, ok, err := c.ByID(context.Background(), "9a414441-bbad-43f1-a3a7-dc262ca790a3")
+	if err != nil || !ok {
+		t.Fatalf("ByID: ok=%v err=%v", ok, err)
+	}
+	if links.ALID != 119257 || links.Romanized != "Jeonjijeok Dokja Sijeom" || links.Native != "전지적 독자 시점" {
+		t.Fatalf("links = %+v", links)
+	}
+	if _, ok, err := c.ByID(context.Background(), "missing"); ok || err == nil {
+		t.Fatalf("missing id: ok=%v err=%v", ok, err)
 	}
 }
 

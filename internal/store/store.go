@@ -39,6 +39,8 @@ type Series struct {
 	ALID               int        `json:"alId"`
 	MALID              int        `json:"malId"`
 	Title              string     `json:"title"`
+	RomanizedTitle     string     `json:"romanizedTitle"` // from MangaDex, e.g. "Jeonjijeok Dokja Sijeom"
+	NativeTitle        string     `json:"nativeTitle"`    // from MangaDex, e.g. "전지적 독자 시점"
 	MUURL              string     `json:"muUrl"`
 	Year               string     `json:"year"`
 	PubStatus          string     `json:"pubStatus"`
@@ -160,6 +162,9 @@ var migrations = []string{
 		updated_at TEXT NOT NULL DEFAULT ''
 	);
 	CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);`,
+	// v2: language-tagged titles from MangaDex for the alternate-name line.
+	`ALTER TABLE series ADD COLUMN romanized_title TEXT NOT NULL DEFAULT '';
+	ALTER TABLE series ADD COLUMN native_title TEXT NOT NULL DEFAULT '';`,
 }
 
 // SchemaVersion is the version Migrate brings the database to.

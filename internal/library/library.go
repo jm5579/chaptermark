@@ -25,6 +25,7 @@ type MU interface {
 
 type MD interface {
 	FindByMU(ctx context.Context, title string, muID int64) (mangadex.Links, bool, error)
+	ByID(ctx context.Context, mdID string) (mangadex.Links, bool, error)
 }
 
 type AL interface {
@@ -162,12 +163,21 @@ func applyDetails(sr *store.Series, d mangaupdates.SeriesDetail) {
 // enrich adds MangaDex links, AniList score and the cover. Failures here are
 // logged, never fatal: MangaUpdates data alone is enough.
 func (s *Service) enrich(ctx context.Context, sr *store.Series) {
-	if sr.MDID == "" && s.MD != nil {
-		links, ok, err := s.MD.FindByMU(ctx, sr.Title, sr.MUID)
+	if s.MD != nil && (sr.MDID == "" || (sr.RomanizedTitle == "" && sr.NativeTitle == "")) {
+		var links mangadex.Links
+		var ok bool
+		var err error
+		if sr.MDID == "" {
+			links, ok, err = s.MD.FindByMU(ctx, sr.Title, sr.MUID)
+		} else {
+			// Linked before titles were stored: fetch them by id.
+			links, ok, err = s.MD.ByID(ctx, sr.MDID)
+		}
 		if err != nil {
 			log.Printf("mangadex lookup for %q: %v", sr.Title, err)
 		} else if ok {
 			sr.MDID, sr.ALID, sr.MALID = links.MDID, links.ALID, links.MALID
+			sr.RomanizedTitle, sr.NativeTitle = links.Romanized, links.Native
 			if sr.CoverURL == "" {
 				sr.CoverURL = links.CoverURL
 			}

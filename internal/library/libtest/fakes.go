@@ -94,6 +94,18 @@ func (f *MD) FindByMU(ctx context.Context, title string, muID int64) (mangadex.L
 	return l, ok, nil
 }
 
+func (f *MD) ByID(ctx context.Context, mdID string) (mangadex.Links, bool, error) {
+	if f.Err != nil {
+		return mangadex.Links{}, false, f.Err
+	}
+	for _, l := range f.Links {
+		if l.MDID == mdID {
+			return l, true, nil
+		}
+	}
+	return mangadex.Links{}, false, nil
+}
+
 // AL is a fake AniList client.
 type AL struct {
 	Scores map[int]float64
@@ -129,7 +141,8 @@ func ORV() (*MU, *MD, *AL) {
 			ORVID: {Chapter: 311, Raw: "311", Group: "Flame Comics", Date: "2026-05-19"},
 		},
 	}
-	md := &MD{Links: map[int64]mangadex.Links{ORVID: {MDID: "9a414441", ALID: 119257, MALID: 132214}}}
+	md := &MD{Links: map[int64]mangadex.Links{ORVID: {MDID: "9a414441", ALID: 119257, MALID: 132214,
+		Romanized: "Jeonjijeok Dokja Sijeom", Native: "전지적 독자 시점"}}}
 	al := &AL{Scores: map[int]float64{119257: 8.6}}
 	return mu, md, al
 }

@@ -74,8 +74,46 @@ func TestMigrateIdempotent(t *testing.T) {
 		t.Fatalf("second Migrate: %v", err)
 	}
 	var v int
-	if err := s.DB().QueryRow("PRAGMA user_version").Scan(&v); err != nil || v != 1 {
-		t.Fatalf("user_version = %d, %v; want 1", v, err)
+	if err := s.DB().QueryRow("PRAGMA user_version").Scan(&v); err != nil || v != 2 {
+		t.Fatalf("user_version = %d, %v; want 2", v, err)
+	}
+}
+
+func TestMigrateFromV1KeepsData(t *testing.T) {
+	ctx := context.Background()
+	s, err := Open(filepath.Join(t.TempDir(), "library.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	// A library created by v1 of the schema.
+	if _, err := s.DB().Exec(migrations[0]); err != nil {
+		t.Fatal(err)
+	}
+	s.DB().Exec("PRAGMA user_version = 1")
+	s.DB().Exec(`INSERT INTO series (id, mu_id, title, type) VALUES (1, 42, 'Eleceed', 'manhwa')`)
+	s.DB().Exec(`INSERT INTO entry (series_id, status, my_chapter) VALUES (1, 'reading', 330)`)
+
+	if err := s.Migrate(ctx); err != nil {
+		t.Fatalf("Migrate v1→v2: %v", err)
+	}
+	it, err := s.GetItem(ctx, 1)
+	if err != nil || it.Series.Title != "Eleceed" || it.Entry.MyChapter != 330 || it.Series.RomanizedTitle != "" {
+		t.Fatalf("after upgrade: %+v, %v", it, err)
+	}
+}
+
+func TestUpdateDetailsWritesTitles(t *testing.T) {
+	s := newStore(t)
+	ctx := context.Background()
+	sr := addSeries(t, s, orv(), "reading")
+	sr.RomanizedTitle, sr.NativeTitle = "Jeonjijeok Dokja Sijeom", "전지적 독자 시점"
+	if err := s.UpdateDetails(ctx, &sr); err != nil {
+		t.Fatal(err)
+	}
+	got, _, _ := s.SeriesByMUID(ctx, sr.MUID)
+	if got.RomanizedTitle != "Jeonjijeok Dokja Sijeom" || got.NativeTitle != "전지적 독자 시점" {
+		t.Fatalf("titles = %q / %q", got.RomanizedTitle, got.NativeTitle)
 	}
 }
 
@@ -120,6 +158,7 @@ func TestSaveAndListItems(t *testing.T) {
 	sr.LatestChapter, sr.LatestRaw, sr.LatestGroup, sr.LatestDate = 311, "311", "Flame Comics", "2026-05-19"
 	sr.LatestManual = &manual
 	sr.TypeOverride = "manga"
+	sr.RomanizedTitle, sr.NativeTitle = "Jeonjijeok Dokja Sijeom", "전지적 독자 시점"
 	sr.DetailsRefreshedAt = time.Date(2026, 10, 1, 8, 0, 0, 0, time.UTC)
 	if err := s.UpsertSeries(ctx, &sr); err != nil {
 		t.Fatal(err)

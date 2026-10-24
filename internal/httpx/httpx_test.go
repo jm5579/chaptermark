@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -125,6 +126,27 @@ func TestOfflineError(t *testing.T) {
 	err := fastClient(0).GetJSON(context.Background(), url, &struct{}{})
 	if !errors.Is(err, ErrOffline) {
 		t.Fatalf("err = %v, want ErrOffline", err)
+	}
+}
+
+func TestRejectsOversizedResponses(t *testing.T) {
+	big := `{"a":"` + strings.Repeat("x", 4096) + `"}`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(big))
+	}))
+	defer srv.Close()
+	c := fastClient(0)
+	c.MaxBody = 1024
+	if err := c.GetJSON(context.Background(), srv.URL, &struct{ A string }{}); !errors.Is(err, ErrTooLarge) {
+		t.Fatalf("GetJSON err = %v, want ErrTooLarge", err)
+	}
+	if _, _, err := c.GetBytes(context.Background(), srv.URL); !errors.Is(err, ErrTooLarge) {
+		t.Fatalf("GetBytes err = %v, want ErrTooLarge", err)
+	}
+	c.MaxBody = 1 << 20
+	if err := c.GetJSON(context.Background(), srv.URL, &struct{ A string }{}); err != nil {
+		t.Fatalf("a response under the limit failed: %v", err)
 	}
 }
 

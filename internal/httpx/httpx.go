@@ -34,6 +34,7 @@ type Client struct {
 	MinInterval time.Duration
 	BaseBackoff time.Duration
 	Sleep       func(time.Duration)
+	MaxBody     int64 // largest response body accepted, in bytes (0 = 20 MB)
 
 	mu   sync.Mutex
 	next time.Time
@@ -105,8 +106,37 @@ func (c *Client) backoff(attempt int, retryAfter string) time.Duration {
 	return c.BaseBackoff << attempt
 }
 
+// ErrTooLarge is returned when a response body exceeds Client.MaxBody, so a
+// broken or hostile server can't make the app read without limit.
+var ErrTooLarge = errors.New("response too large")
+
+const defaultMaxBody = 20 << 20
+
+func (c *Client) readBody(r io.Reader) ([]byte, error) {
+	limit := c.MaxBody
+	if limit <= 0 {
+		limit = defaultMaxBody
+	}
+	b, err := io.ReadAll(io.LimitReader(r, limit+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(b)) > limit {
+		return nil, ErrTooLarge
+	}
+	return b, nil
+}
+
 func decode(r io.Reader, out any) error {
 	return json.NewDecoder(r).Decode(out)
+}
+
+func (c *Client) decodeBody(r io.Reader, out any) error {
+	b, err := c.readBody(r)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(b, out)
 }
 
 func (c *Client) GetJSON(ctx context.Context, url string, out any) error {
@@ -115,7 +145,7 @@ func (c *Client) GetJSON(ctx context.Context, url string, out any) error {
 		return err
 	}
 	defer resp.Body.Close()
-	return decode(resp.Body, out)
+	return c.decodeBody(resp.Body, out)
 }
 
 func (c *Client) PostJSON(ctx context.Context, url string, body, out any) error {
@@ -128,16 +158,16 @@ func (c *Client) PostJSON(ctx context.Context, url string, body, out any) error 
 		return err
 	}
 	defer resp.Body.Close()
-	return decode(resp.Body, out)
+	return c.decodeBody(resp.Body, out)
 }
 
-// GetBytes downloads url (capped at 10 MB) and returns its body and Content-Type.
+// GetBytes downloads url (capped at MaxBody) and returns its body and Content-Type.
 func (c *Client) GetBytes(ctx context.Context, url string) ([]byte, string, error) {
 	resp, err := c.do(ctx, http.MethodGet, url, nil, "*/*")
 	if err != nil {
 		return nil, "", err
 	}
 	defer resp.Body.Close()
-	b, err := io.ReadAll(io.LimitReader(resp.Body, 10<<20))
+	b, err := c.readBody(resp.Body)
 	return b, resp.Header.Get("Content-Type"), err
 }

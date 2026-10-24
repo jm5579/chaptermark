@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -93,7 +94,10 @@ type Store struct {
 
 // Open opens (creating if needed) the database at path. Call Migrate before use.
 func Open(path string) (*Store, error) {
-	dsn := "file:" + path + "?_pragma=journal_mode(WAL)&_pragma=foreign_keys(1)&_pragma=busy_timeout(5000)"
+	// The path goes into a SQLite URI, where '#' and '?' end the file name and
+	// '%' starts an escape; escape them so folders like "Manga #1" still work.
+	uriPath := strings.NewReplacer("%", "%25", "?", "%3F", "#", "%23").Replace(path)
+	dsn := "file:" + uriPath + "?_pragma=journal_mode(WAL)&_pragma=foreign_keys(1)&_pragma=busy_timeout(5000)"
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, err

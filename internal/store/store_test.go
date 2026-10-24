@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -40,6 +41,31 @@ func addSeries(t *testing.T, s *Store, sr Series, status Status) Series {
 		t.Fatalf("SaveEntry: %v", err)
 	}
 	return sr
+}
+
+func TestOpenPathWithURICharacters(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "Manga #1 (100%25 done) & more")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "library.db")
+	s, err := Open(path)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	if err := s.Migrate(context.Background()); err != nil {
+		t.Fatalf("Migrate: %v", err)
+	}
+	s.Close()
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("database not created at the exact path: %v", err)
+	}
+	entries, _ := os.ReadDir(filepath.Dir(dir))
+	for _, e := range entries {
+		if e.Name() != filepath.Base(dir) {
+			t.Errorf("stray file created next to the folder: %q", e.Name())
+		}
+	}
 }
 
 func TestMigrateIdempotent(t *testing.T) {

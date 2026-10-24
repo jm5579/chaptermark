@@ -54,7 +54,8 @@ func TestInitReportsUnwritableFolder(t *testing.T) {
 }
 
 func TestSetupBacksUpExistingLibrary(t *testing.T) {
-	dir := filepath.Join(t.TempDir(), "data")
+	// A folder name with URI-special characters must still keep everything inside it.
+	dir := filepath.Join(t.TempDir(), "Manga #1 100%25", "data")
 	a := readyApp(t, dir)
 	a.close()
 	readyApp(t, dir)

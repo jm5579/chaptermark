@@ -13,7 +13,8 @@ import (
 const seriesCols = `s.id, s.mu_id, s.md_id, s.al_id, s.mal_id, s.title, s.mu_url, s.year, s.pub_status,
 	s.type, s.type_override, s.completed, s.cover_file, s.cover_url, s.mu_rating, s.mu_votes, s.al_rating,
 	s.latest_chapter, s.latest_raw, s.latest_group, s.latest_date, s.latest_manual,
-	s.details_refreshed_at, s.chapters_checked_at, s.romanized_title, s.native_title`
+	s.details_refreshed_at, s.chapters_checked_at, s.romanized_title, s.native_title,
+	s.release_interval_days, s.last_release_date`
 
 const entryCols = `e.series_id, e.status, e.my_chapter, e.my_rating, e.notes, e.read_url,
 	e.last_read_at, e.added_at, e.updated_at`
@@ -28,7 +29,7 @@ func scanItem(row scanner, withEntry bool) (Item, error) {
 	dest := []any{&sr.ID, &sr.MUID, &sr.MDID, &sr.ALID, &sr.MALID, &sr.Title, &sr.MUURL, &sr.Year, &sr.PubStatus,
 		&sr.Type, &sr.TypeOverride, &sr.Completed, &sr.CoverFile, &sr.CoverURL, &sr.MURating, &sr.MUVotes, &sr.ALRating,
 		&sr.LatestChapter, &sr.LatestRaw, &sr.LatestGroup, &sr.LatestDate, &manual, &detailsAt, &checkedAt,
-		&sr.RomanizedTitle, &sr.NativeTitle}
+		&sr.RomanizedTitle, &sr.NativeTitle, &sr.ReleaseIntervalDays, &sr.LastReleaseDate}
 	e := &it.Entry
 	var lastRead, added, updated string
 	if withEntry {
@@ -64,8 +65,8 @@ func (s *Store) UpsertSeries(ctx context.Context, sr *Series) error {
 	err = tx.QueryRowContext(ctx, `INSERT INTO series (mu_id, md_id, al_id, mal_id, title, mu_url, year, pub_status,
 		type, type_override, completed, cover_file, cover_url, mu_rating, mu_votes, al_rating,
 		latest_chapter, latest_raw, latest_group, latest_date, latest_manual, details_refreshed_at, chapters_checked_at,
-		romanized_title, native_title)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+		romanized_title, native_title, release_interval_days, last_release_date)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 		ON CONFLICT(mu_id) DO UPDATE SET md_id=excluded.md_id, al_id=excluded.al_id, mal_id=excluded.mal_id,
 		title=excluded.title, mu_url=excluded.mu_url, year=excluded.year, pub_status=excluded.pub_status,
 		type=excluded.type, type_override=excluded.type_override, completed=excluded.completed,
@@ -74,12 +75,14 @@ func (s *Store) UpsertSeries(ctx context.Context, sr *Series) error {
 		latest_raw=excluded.latest_raw, latest_group=excluded.latest_group, latest_date=excluded.latest_date,
 		latest_manual=excluded.latest_manual, details_refreshed_at=excluded.details_refreshed_at,
 		chapters_checked_at=excluded.chapters_checked_at, romanized_title=excluded.romanized_title,
-		native_title=excluded.native_title
+		native_title=excluded.native_title, release_interval_days=excluded.release_interval_days,
+		last_release_date=excluded.last_release_date
 		RETURNING id`,
 		sr.MUID, sr.MDID, sr.ALID, sr.MALID, sr.Title, sr.MUURL, sr.Year, sr.PubStatus,
 		sr.Type, sr.TypeOverride, sr.Completed, sr.CoverFile, sr.CoverURL, sr.MURating, sr.MUVotes, sr.ALRating,
 		sr.LatestChapter, sr.LatestRaw, sr.LatestGroup, sr.LatestDate, nullable(sr.LatestManual),
-		fmtTime(sr.DetailsRefreshedAt), fmtTime(sr.ChaptersCheckedAt), sr.RomanizedTitle, sr.NativeTitle).Scan(&sr.ID)
+		fmtTime(sr.DetailsRefreshedAt), fmtTime(sr.ChaptersCheckedAt), sr.RomanizedTitle, sr.NativeTitle,
+		sr.ReleaseIntervalDays, sr.LastReleaseDate).Scan(&sr.ID)
 	if err != nil {
 		return err
 	}
@@ -214,7 +217,10 @@ func (s *Store) GetItem(ctx context.Context, seriesID int64) (Item, error) {
 	if err != nil {
 		return Item{}, err
 	}
-	it.Series.AltTitles, err = s.altTitles(ctx, seriesID)
+	if it.Series.AltTitles, err = s.altTitles(ctx, seriesID); err != nil {
+		return it, err
+	}
+	it.Entry.Tags, err = s.seriesTags(ctx, seriesID)
 	return it, err
 }
 
@@ -240,8 +246,13 @@ func (s *Store) ListItems(ctx context.Context) ([]Item, error) {
 	if err != nil {
 		return nil, err
 	}
+	tags, err := s.allSeriesTags(ctx)
+	if err != nil {
+		return nil, err
+	}
 	for i := range items {
 		items[i].Series.AltTitles = alts[items[i].Series.ID]
+		items[i].Entry.Tags = tags[items[i].Series.ID]
 	}
 	return items, nil
 }
@@ -259,7 +270,10 @@ func (s *Store) SaveEntry(ctx context.Context, e Entry) error {
 }
 
 func (s *Store) DeleteSeries(ctx context.Context, id int64) error {
-	_, err := s.db.ExecContext(ctx, "DELETE FROM series WHERE id = ?", id)
+	if _, err := s.db.ExecContext(ctx, "DELETE FROM series WHERE id = ?", id); err != nil {
+		return err
+	}
+	_, err := s.db.ExecContext(ctx, deleteOrphanTags)
 	return err
 }
 
@@ -305,9 +319,9 @@ func (s *Store) SearchLocal(ctx context.Context, query string, limit int) ([]Ite
 // cleared once the fetched chapter passes it.
 func (s *Store) SetLatest(ctx context.Context, id int64, l Latest, checkedAt time.Time) error {
 	_, err := s.db.ExecContext(ctx, `UPDATE series SET latest_chapter = ?, latest_raw = ?, latest_group = ?,
-		latest_date = ?, chapters_checked_at = ?,
+		latest_date = ?, chapters_checked_at = ?, release_interval_days = ?, last_release_date = ?,
 		latest_manual = CASE WHEN latest_manual IS NOT NULL AND ? > latest_manual THEN NULL ELSE latest_manual END
-		WHERE id = ?`, l.Chapter, l.Raw, l.Group, l.Date, fmtTime(checkedAt), l.Chapter, id)
+		WHERE id = ?`, l.Chapter, l.Raw, l.Group, l.Date, fmtTime(checkedAt), l.IntervalDays, l.LastReleaseDate, l.Chapter, id)
 	return err
 }
 

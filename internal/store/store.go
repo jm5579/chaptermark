@@ -59,7 +59,11 @@ type Series struct {
 	LatestManual       *float64   `json:"latestManual"`
 	DetailsRefreshedAt time.Time  `json:"detailsRefreshedAt"`
 	ChaptersCheckedAt  time.Time  `json:"chaptersCheckedAt"`
-	AltTitles          []string   `json:"altTitles"`
+	// Release rhythm, from the release list: typical days between new
+	// chapters (0 = unknown) and the date of the most recent release.
+	ReleaseIntervalDays float64  `json:"releaseIntervalDays"`
+	LastReleaseDate     string   `json:"lastReleaseDate"`
+	AltTitles           []string `json:"altTitles"`
 }
 
 // Entry is the owner's own tracking for a series.
@@ -73,6 +77,7 @@ type Entry struct {
 	LastReadAt time.Time `json:"lastReadAt"`
 	AddedAt    time.Time `json:"addedAt"`
 	UpdatedAt  time.Time `json:"updatedAt"`
+	Tags       []string  `json:"tags"` // the owner's custom lists; stored in series_tags
 }
 
 type Item struct {
@@ -82,10 +87,12 @@ type Item struct {
 
 // Latest is the newest release found for a series.
 type Latest struct {
-	Chapter float64
-	Raw     string
-	Group   string
-	Date    string
+	Chapter         float64
+	Raw             string
+	Group           string
+	Date            string
+	IntervalDays    float64 // typical days between new chapters, 0 if unknown
+	LastReleaseDate string  // most recent release of any chapter
 }
 
 var ErrNotFound = errors.New("not found")
@@ -165,6 +172,18 @@ var migrations = []string{
 	// v2: language-tagged titles from MangaDex for the alternate-name line.
 	`ALTER TABLE series ADD COLUMN romanized_title TEXT NOT NULL DEFAULT '';
 	ALTER TABLE series ADD COLUMN native_title TEXT NOT NULL DEFAULT '';`,
+	// v3: release rhythm and the owner's tags (custom lists).
+	`ALTER TABLE series ADD COLUMN release_interval_days REAL NOT NULL DEFAULT 0;
+	ALTER TABLE series ADD COLUMN last_release_date TEXT NOT NULL DEFAULT '';
+	CREATE TABLE tags (
+		id INTEGER PRIMARY KEY,
+		name TEXT NOT NULL UNIQUE COLLATE NOCASE
+	);
+	CREATE TABLE series_tags (
+		series_id INTEGER NOT NULL REFERENCES series(id) ON DELETE CASCADE,
+		tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+		PRIMARY KEY (series_id, tag_id)
+	);`,
 }
 
 // SchemaVersion is the version Migrate brings the database to.

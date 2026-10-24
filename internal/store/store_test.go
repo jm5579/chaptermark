@@ -74,8 +74,8 @@ func TestMigrateIdempotent(t *testing.T) {
 		t.Fatalf("second Migrate: %v", err)
 	}
 	var v int
-	if err := s.DB().QueryRow("PRAGMA user_version").Scan(&v); err != nil || v != 2 {
-		t.Fatalf("user_version = %d, %v; want 2", v, err)
+	if err := s.DB().QueryRow("PRAGMA user_version").Scan(&v); err != nil || v != 3 {
+		t.Fatalf("user_version = %d, %v; want 3", v, err)
 	}
 }
 

@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/jm5579/chaptermark/internal/httpx"
 )
@@ -69,8 +70,38 @@ func TestHandlerServesFile(t *testing.T) {
 	}
 	defer resp.Body.Close()
 	b, _ := io.ReadAll(resp.Body)
-	if resp.StatusCode != 200 || string(b) != "JPEG" || resp.Header.Get("Cache-Control") != "max-age=86400" {
+	// no-cache: the webview must revalidate, so a re-downloaded cover (same
+	// file name) is never shown stale.
+	if resp.StatusCode != 200 || string(b) != "JPEG" || resp.Header.Get("Cache-Control") != "no-cache" {
 		t.Fatalf("status=%d body=%q cache=%q", resp.StatusCode, b, resp.Header.Get("Cache-Control"))
+	}
+	lastMod := resp.Header.Get("Last-Modified")
+	if lastMod == "" {
+		t.Fatal("Last-Modified missing, so revalidation can't work")
+	}
+
+	// Revalidating an unchanged file is a cheap 304; a replaced file is re-sent.
+	req, _ := http.NewRequest("GET", srv.URL+"/covers/7.jpg", nil)
+	req.Header.Set("If-Modified-Since", lastMod)
+	resp2, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp2.Body.Close()
+	if resp2.StatusCode != http.StatusNotModified {
+		t.Fatalf("revalidation status = %d, want 304", resp2.StatusCode)
+	}
+	later := time.Now().Add(2 * time.Hour)
+	os.WriteFile(filepath.Join(dir, "7.jpg"), []byte("NEWJPEG"), 0o644)
+	os.Chtimes(filepath.Join(dir, "7.jpg"), later, later)
+	resp3, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b3, _ := io.ReadAll(resp3.Body)
+	resp3.Body.Close()
+	if resp3.StatusCode != 200 || string(b3) != "NEWJPEG" {
+		t.Fatalf("replaced cover: status=%d body=%q", resp3.StatusCode, b3)
 	}
 }
 

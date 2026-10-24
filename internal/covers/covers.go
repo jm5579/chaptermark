@@ -82,7 +82,9 @@ func Handler(dir string) http.Handler {
 			http.NotFound(w, r)
 			return
 		}
-		w.Header().Set("Cache-Control", "max-age=86400")
+		// Revalidate every time (ServeFile answers 304 if unchanged), so a
+		// re-downloaded cover with the same file name never shows stale.
+		w.Header().Set("Cache-Control", "no-cache")
 		http.ServeFile(w, r, filepath.Join(dir, name))
 	})
 }

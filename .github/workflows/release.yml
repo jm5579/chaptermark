@@ -11,6 +11,12 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
+    env:
+      # Passed via the environment, never pasted into scripts (avoids script injection).
+      TAG: ${{ github.ref_name }}
+    defaults:
+      run:
+        shell: pwsh
     steps:
       - uses: actions/checkout@v4
 
@@ -37,19 +43,17 @@ jobs:
       - name: Build exe
         run: |
           go install github.com/wailsapp/wails/v2/cmd/wails@v2.17.0
-          wails build -clean -ldflags "-X main.version=${{ github.ref_name }}"
+          wails build -clean -ldflags "-X main.version=$env:TAG"
 
       - name: Package portable zip
-        shell: pwsh
         run: |
           New-Item -ItemType Directory -Path ChapterMark | Out-Null
           Copy-Item build/bin/ChapterMark.exe ChapterMark/
-          Compress-Archive -Path ChapterMark -DestinationPath "ChapterMark-${{ github.ref_name }}-windows.zip"
+          Compress-Archive -Path ChapterMark -DestinationPath "ChapterMark-$env:TAG-windows.zip"
 
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: >
-          gh release create "${{ github.ref_name }}" "ChapterMark-${{ github.ref_name }}-windows.zip"
-          --title "ChapterMark ${{ github.ref_name }}"
-          --notes "Download the zip, extract the ChapterMark folder anywhere you can write to, and double-click ChapterMark.exe. The first time, Windows may say 'Windows protected your PC' because the exe isn't code-signed: click More info, then Run anyway."
+        run: |
+          $notes = "Download the zip, extract the ChapterMark folder anywhere you can write to, and double-click ChapterMark.exe. The first time, Windows may say 'Windows protected your PC' because the exe isn't code-signed: click More info, then Run anyway."
+          gh release create "$env:TAG" "ChapterMark-$env:TAG-windows.zip" --title "ChapterMark $env:TAG" --notes $notes

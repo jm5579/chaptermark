@@ -1,7 +1,69 @@
+:root {
+    --bg: #141218;
+    --surface: #211e27;
+    --surface-2: #2a2632;
+    --surface-3: #3a3542;
+    --border: #33303b;
+    --text: #ece8f1;
+    --muted: #9b95a6;
+    --faint: #7f798a;
+    --accent: #ff8a5c;
+    --new: #ff6b35;
+    --star: #ffcf5c;
+    --danger: #ff5c6c;
+    --radius: 10px;
+    --font: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+    color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
 html, body, #root {
     margin: 0;
     height: 100%;
-    background: #141218;
-    color: #ece8f1;
-    font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
 }
+
+button, input, select, textarea { font: inherit; color: inherit; }
+
+button {
+    cursor: pointer;
+    border: none;
+    background: var(--surface-2);
+    border-radius: 8px;
+    padding: 7px 12px;
+    transition: background .12s, opacity .12s;
+}
+button:hover { background: var(--surface-3); }
+button:disabled { opacity: .5; cursor: default; }
+button.primary { background: var(--accent); color: #141218; font-weight: 600; }
+button.primary:hover { background: #ff9d76; }
+button.danger { background: transparent; color: var(--danger); border: 1px solid #5a2a32; }
+button.ghost { background: transparent; }
+button.ghost:hover { background: var(--surface-2); }
+
+input, select, textarea {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 7px 10px;
+    outline: none;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 5px; border: 2px solid var(--bg); }
+
+.muted { color: var(--muted); }
+.faint { color: var(--faint); }
+.star { color: var(--star); font-weight: 600; }
+.badge-new {
+    background: var(--new); color: #fff; font-weight: 700; font-size: 11px;
+    border-radius: 10px; padding: 2px 7px; text-align: center; white-space: nowrap;
+}
+.pill { font-size: 11px; padding: 1px 7px; border-radius: 5px; background: var(--surface-2); color: #b9b2c6; }
+.error-text { color: var(--danger); }

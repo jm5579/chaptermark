@@ -129,6 +129,23 @@ func TestOfflineKeepsStoredLatest(t *testing.T) {
 	}
 }
 
+func TestSeriesRemovedDuringCheckIsNotAFailure(t *testing.T) {
+	f := newFixture(t, spec{1, store.StatusReading, 9}, spec{2, store.StatusReading, 5})
+	// While series 1 is being checked, the owner removes series 2.
+	f.mu.OnLatest = func(id int64) {
+		if id == 1 {
+			f.lib.Store.DeleteSeries(context.Background(), f.ids[2])
+		}
+	}
+	var last Progress
+	if err := f.chk.Run(context.Background(), func(p Progress) { last = p }, func(library.ItemView) {}); err != nil {
+		t.Fatal(err)
+	}
+	if last.Error != "" || last.Failed != 0 || last.Done != last.Total {
+		t.Fatalf("progress = %+v, want a clean finish", last)
+	}
+}
+
 func TestDue(t *testing.T) {
 	f := newFixture(t)
 	ctx := context.Background()

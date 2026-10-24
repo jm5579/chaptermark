@@ -119,6 +119,12 @@ func (c *Checker) Run(ctx context.Context, emit func(Progress), onItem func(libr
 			break
 		}
 		err := c.Lib.RefreshLatest(ctx, it.Series.ID)
+		if errors.Is(err, store.ErrNotFound) {
+			// Removed by the owner while the check was running: nothing to do.
+			p.Done++
+			c.set(p, emit)
+			continue
+		}
 		if err == nil && c.Lib.DetailsStale(it) {
 			if derr := c.Lib.RefreshDetails(ctx, it.Series.ID); derr != nil {
 				log.Printf("refresh details %q: %v", it.Series.Title, derr)

@@ -19,9 +19,10 @@ type MU struct {
 	Results  []mangaupdates.SearchResult
 	Details  map[int64]mangaupdates.SeriesDetail
 	Releases map[int64]mangaupdates.Release
-	Err      error         // returned by every call when set
-	Block    chan struct{} // when set, LatestRelease waits until it is closed
-	OnSeries func()        // when set, runs inside Series (simulates edits during the network call)
+	Err      error          // returned by every call when set
+	Block    chan struct{}  // when set, LatestRelease waits until it is closed
+	OnSeries func()         // when set, runs inside Series (simulates edits during the network call)
+	OnLatest func(id int64) // when set, runs at the start of LatestRelease
 
 	mu    sync.Mutex
 	Calls []int64 // series ids passed to LatestRelease, in order
@@ -66,6 +67,9 @@ func (f *MU) LatestRelease(ctx context.Context, id int64) (mangaupdates.Release,
 	f.mu.Lock()
 	f.Calls = append(f.Calls, id)
 	f.mu.Unlock()
+	if f.OnLatest != nil {
+		f.OnLatest(id)
+	}
 	if f.Block != nil {
 		<-f.Block
 	}

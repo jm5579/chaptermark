@@ -1,7 +1,7 @@
 import {useEffect, useState} from 'react'
 import {api, errorMessage, toUpdate, type EntryUpdate, type ItemView} from '../lib/api'
 import {useEscape} from '../lib/hooks'
-import {formatChapter, formatDate, relativeTime} from '../lib/time'
+import {formatChapter, formatDate, nextChapter, relativeTime} from '../lib/time'
 import {STATUS_LABELS, STATUSES, TYPE_LABELS, TYPES, type StatusKey, type TypeKey} from '../lib/view'
 import {Cover} from './Cover'
 import {RatingInput} from './ui'
@@ -54,7 +54,7 @@ export function DetailPanel({item, now, onClose, onChange, onRemoved}: {
     }
 
     const step = (delta: number) => {
-        const n = Math.max(0, Math.floor(e.myChapter) + delta)
+        const n = nextChapter(chapter, e.myChapter, delta)
         setChapter(String(n))
         save({myChapter: n})
     }

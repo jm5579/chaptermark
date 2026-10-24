@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest'
-import {formatChapter, isZeroTime, relativeTime} from './time'
+import {formatChapter, isZeroTime, nextChapter, relativeTime} from './time'
 
 const now = new Date('2026-10-23T12:00:00Z')
 
@@ -26,6 +26,19 @@ describe('isZeroTime', () => {
         expect(isZeroTime('0001-01-01T00:00:00Z')).toBe(true)
         expect(isZeroTime('')).toBe(true)
         expect(isZeroTime('2026-10-23T12:00:00Z')).toBe(false)
+    })
+})
+
+describe('nextChapter', () => {
+    it.each([
+        ['280', 276, 1, 281],  // a just-typed value wins over the saved one
+        ['', 276, 1, 277],     // empty box: step from the saved chapter
+        ['abc', 276, 1, 277],  // junk: step from the saved chapter
+        ['-3', 5, 1, 6],       // negative isn't valid either
+        ['10.5', 10, 1, 11],   // half chapters step to the next whole one
+        ['0', 5, -1, 0],       // never below zero
+    ])('nextChapter(%j, %d, %d) = %d', (input, saved, delta, want) => {
+        expect(nextChapter(input as string, saved as number, delta as number)).toBe(want)
     })
 })
 

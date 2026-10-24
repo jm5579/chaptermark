@@ -85,7 +85,7 @@ func validate(st store.Status, chapter float64, rating int, override store.Serie
 		return fmt.Errorf("chapter can't be negative")
 	}
 	if rating < 0 || rating > 10 {
-		return fmt.Errorf("rating must be 1–10 (or 0 for unrated)")
+		return fmt.Errorf("rating must be 1-10 (or 0 for unrated)")
 	}
 	switch override {
 	case "", store.TypeManhwa, store.TypeManga, store.TypeManhua:

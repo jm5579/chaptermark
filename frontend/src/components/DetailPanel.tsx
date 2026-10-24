@@ -112,7 +112,7 @@ export function DetailPanel({item, now, onClose, onChange, onRemoved}: {
                 <section className="panel-section">
                     <h3>Your progress</h3>
                     <div className="chapter-stepper">
-                        <button onClick={() => step(-1)} disabled={e.myChapter <= 0} aria-label="One chapter back">−1</button>
+                        <button onClick={() => step(-1)} disabled={e.myChapter <= 0} aria-label="One chapter back">-1</button>
                         <input type="number" min={0} step="any" value={chapter} aria-label="Last chapter read"
                                onChange={ev => setChapter(ev.target.value)}
                                onBlur={ev => commitChapter(ev.target.value)}
@@ -147,13 +147,13 @@ export function DetailPanel({item, now, onClose, onChange, onRemoved}: {
                 <section className="panel-section">
                     <h3>Where I read it</h3>
                     <div className="url-row">
-                        <input type="url" placeholder="https://…" value={readUrl}
+                        <input type="url" placeholder="https://..." value={readUrl}
                                onChange={ev => setReadUrl(ev.target.value)}
                                onBlur={() => readUrl !== e.readUrl && save({readUrl: readUrl.trim()})}/>
                         <button onClick={() => api.OpenURL(e.readUrl)} disabled={!/^https?:\/\//.test(e.readUrl)}>Open</button>
                     </div>
                     <h3>Notes</h3>
-                    <textarea rows={3} value={notes} placeholder="Anything to remember…"
+                    <textarea rows={3} value={notes} placeholder="Anything to remember..."
                               onChange={ev => setNotes(ev.target.value)}
                               onBlur={() => notes !== e.notes && save({notes})}/>
                 </section>
@@ -161,11 +161,11 @@ export function DetailPanel({item, now, onClose, onChange, onRemoved}: {
                 <section className="panel-section">
                     <h3>Public ratings</h3>
                     <div className="ratings">
-                        <span>MangaUpdates <b>{s.muRating > 0 ? s.muRating.toFixed(2) : '–'}</b>
+                        <span>MangaUpdates <b>{s.muRating > 0 ? s.muRating.toFixed(2) : '-'}</b>
                             {s.muVotes > 0 && <span className="faint"> ({s.muVotes.toLocaleString()} votes)</span>}</span>
-                        <span>AniList <b>{s.alRating > 0 ? s.alRating.toFixed(1) : '–'}</b></span>
+                        <span>AniList <b>{s.alRating > 0 ? s.alRating.toFixed(1) : '-'}</b></span>
                     </div>
-                    {s.muUrl && <button className="ghost link" onClick={() => api.OpenURL(s.muUrl)}>Open on MangaUpdates ↗</button>}
+                    {s.muUrl && <button className="ghost link" onClick={() => api.OpenURL(s.muUrl)}>Open on MangaUpdates</button>}
                 </section>
 
                 {(s.altTitles?.length ?? 0) > 1 && (
@@ -182,7 +182,7 @@ export function DetailPanel({item, now, onClose, onChange, onRemoved}: {
                 <section className="panel-section danger-zone">
                     {confirmRemove
                         ? <div className="confirm">
-                            <span>Remove “{s.title}” from your list?</span>
+                            <span>Remove "{s.title}" from your list?</span>
                             <button className="ghost" onClick={() => setConfirmRemove(false)}>Cancel</button>
                             <button className="danger" onClick={remove}>Remove</button>
                         </div>

@@ -26,14 +26,14 @@ export function relativeTime(iso: any, now: Date = new Date()): string {
     return plural(Math.floor(days / 365), 'year')
 }
 
-/** 311 → "311", 10.5 → "10.5", 0 → "–" (unknown). */
+/** 311 -> "311", 10.5 -> "10.5", 0 -> "-" (unknown). */
 export function formatChapter(n: number): string {
-    if (!n) return '–'
+    if (!n) return '-'
     return Number.isInteger(n) ? String(n) : String(Math.round(n * 10) / 10)
 }
 
 /**
- * The chapter the ±1 buttons should save: steps from what's typed in the box
+ * The chapter the +1 / -1 buttons should save: steps from what's typed in the box
  * (if it's a valid number) so a just-typed value isn't lost, else from the
  * saved chapter. Never below 0.
  */
@@ -43,7 +43,7 @@ export function nextChapter(input: string, saved: number, delta: number): number
     return Math.max(0, Math.floor(base) + delta)
 }
 
-/** "2026-05-19" → "19 May 2026"; anything else is returned unchanged. */
+/** "2026-05-19" -> "19 May 2026"; anything else is returned unchanged. */
 export function formatDate(ymd: string): string {
     const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(ymd ?? '')
     if (!m) return ymd ?? ''

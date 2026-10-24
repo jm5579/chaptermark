@@ -84,8 +84,8 @@ export function SettingsDialog({dataDir, version, onClose, onImported}: {
                 <h3>Your list</h3>
                 <p className="faint small">Export saves everything to a single file you can keep anywhere. Import reads one back.</p>
                 <div className="button-row">
-                    <button onClick={exportList} disabled={busy}>Export list…</button>
-                    {importStep === 'idle' && <button onClick={() => setImportStep('choose')} disabled={busy}>Import list…</button>}
+                    <button onClick={exportList} disabled={busy}>Export list</button>
+                    {importStep === 'idle' && <button onClick={() => setImportStep('choose')} disabled={busy}>Import list</button>}
                 </div>
                 {importStep === 'choose' && (
                     <div className="confirm">

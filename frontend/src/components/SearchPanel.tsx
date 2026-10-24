@@ -72,7 +72,7 @@ export function SearchPanel({onOpen, onAdd}: {
 
     return (
         <div className="search" ref={box}>
-            <input className="search-input" placeholder="Search your list or add a new series…" value={q}
+            <input className="search-input" placeholder="Search your list or add a new series..." value={q}
                    onChange={e => {
                        setQ(e.target.value)
                        setOpen(true)
@@ -90,7 +90,7 @@ export function SearchPanel({onOpen, onAdd}: {
                                     <span className="result-main">
                                         <span className="t">{it.series.title}</span>
                                         <span className="faint small">
-                                            {STATUS_LABELS[it.entry.status as StatusKey]} · ch {formatChapter(it.entry.myChapter) === '–' ? 0 : formatChapter(it.entry.myChapter)} of {formatChapter(it.effectiveLatest)}
+                                            {STATUS_LABELS[it.entry.status as StatusKey]} · ch {formatChapter(it.entry.myChapter) === '-' ? 0 : formatChapter(it.entry.myChapter)} of {formatChapter(it.effectiveLatest)}
                                         </span>
                                     </span>
                                     {it.newCount > 0 && it.entry.status !== 'plan' && <span className="badge-new">+{it.newCount}</span>}
@@ -106,8 +106,8 @@ export function SearchPanel({onOpen, onAdd}: {
                             </label>
                         </h3>
                         {error && <p className="error-text small">{error}</p>}
-                        {!error && debounced.length < 2 && <p className="faint small">Keep typing…</p>}
-                        {!error && loading && <p className="faint small">Searching MangaUpdates…</p>}
+                        {!error && debounced.length < 2 && <p className="faint small">Keep typing...</p>}
+                        {!error && loading && <p className="faint small">Searching MangaUpdates...</p>}
                         {!error && !loading && online?.length === 0 && <p className="faint small">No results on MangaUpdates.</p>}
                         {!loading && online?.map(r => (
                             <div key={r.id} className="result">
@@ -119,7 +119,7 @@ export function SearchPanel({onOpen, onAdd}: {
                                     <span className="small result-meta">
                                         <span className="pill">{typeLabel(r)}</span>
                                         {r.year && <span className="faint">{r.year}</span>}
-                                        <span className="muted">MU {r.rating > 0 ? r.rating.toFixed(1) : '–'}</span>
+                                        <span className="muted">MU {r.rating > 0 ? r.rating.toFixed(1) : '-'}</span>
                                     </span>
                                 </span>
                                 {r.inLibrary

@@ -96,8 +96,8 @@ function App() {
                 <div className="series-list">
                     {view.list.length === 0
                         ? <EmptyState text={items.length === 0
-                            ? 'Nothing here yet — search above to add your first series.'
-                            : `No ${TYPE_LABELS[type].toLowerCase()} in “${STATUS_LABELS[tab]}”.`}/>
+                            ? 'Nothing here yet. Search above to add your first series.'
+                            : `No ${TYPE_LABELS[type].toLowerCase()} in "${STATUS_LABELS[tab]}".`}/>
                         : view.list.map(it => <SeriesRow key={it.series.id} it={it} now={now} onOpen={setOpenId}/>)}
                 </div>
             </main>

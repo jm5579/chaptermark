@@ -16,7 +16,7 @@ describe('relativeTime', () => {
         ['2023-01-01T12:00:00Z', '3 years ago'],
         ['0001-01-01T00:00:00Z', 'never'],
         ['', 'never'],
-    ])('%s → %s', (iso, want) => {
+    ])('%s -> %s', (iso, want) => {
         expect(relativeTime(iso, now)).toBe(want)
     })
 })
@@ -46,8 +46,8 @@ describe('formatChapter', () => {
     it.each([
         [311, '311'],
         [10.5, '10.5'],
-        [0, '–'],
-    ])('%s → %s', (n, want) => {
+        [0, '-'],
+    ])('%s -> %s', (n, want) => {
         expect(formatChapter(n)).toBe(want)
     })
 })

@@ -293,7 +293,7 @@ func (a *App) SearchOnline(q string, page int, includeOther bool) ([]library.Onl
 	}
 	res, err := a.lib.SearchOnline(context.Background(), q, page, includeOther)
 	if errors.Is(err, httpx.ErrOffline) {
-		return nil, errors.New("couldn't reach MangaUpdates — check your internet connection")
+		return nil, errors.New("couldn't reach MangaUpdates. Check your internet connection")
 	}
 	return res, err
 }
@@ -304,7 +304,7 @@ func (a *App) AddSeries(muID int64, in library.AddInput) (library.ItemView, erro
 	}
 	v, err := a.lib.Add(context.Background(), muID, in)
 	if errors.Is(err, httpx.ErrOffline) {
-		return v, errors.New("couldn't reach MangaUpdates — check your internet connection")
+		return v, errors.New("couldn't reach MangaUpdates. Check your internet connection")
 	}
 	return v, err
 }

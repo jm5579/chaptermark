@@ -63,7 +63,7 @@ export function AddDialog({result, onClose, onAdded}: {
                         <select value={type} onChange={e => setType(e.target.value as TypeKey)}>
                             {TYPES.map(t => <option key={t} value={t}>{TYPE_LABELS[t]}</option>)}
                         </select>
-                        <span className="faint small">MangaUpdates lists this as “{result.type}”.</span>
+                        <span className="faint small">MangaUpdates lists this as "{result.type}".</span>
                     </label>
                 )}
                 <div className="field">Your rating <RatingInput value={rating} onChange={setRating}/></div>
@@ -71,7 +71,7 @@ export function AddDialog({result, onClose, onAdded}: {
                 <div className="actions">
                     <button type="button" className="ghost" onClick={onClose} disabled={busy}>Cancel</button>
                     <button type="submit" className="primary" disabled={busy}>
-                        {busy ? 'Adding… fetching details' : 'Add series'}
+                        {busy ? 'Adding, fetching details...' : 'Add series'}
                     </button>
                 </div>
             </form>

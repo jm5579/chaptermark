@@ -22,7 +22,7 @@ export function Modal({title, onClose, children, wide = false}: {
     )
 }
 
-/** Owner rating 1–10; clicking the selected value clears it (unrated). */
+/** Owner rating 1-10; clicking the selected value clears it (unrated). */
 export function RatingInput({value, onChange}: { value: number; onChange: (v: number) => void }) {
     return (
         <div className="rating-input" role="radiogroup" aria-label="Your rating">

@@ -4,9 +4,9 @@ import {isZeroTime, relativeTime} from '../lib/time'
 
 function checkLabel(p: Progress | null, now: Date): string {
     if (!p) return '↻ Check for new chapters'
-    if (p.running) return p.total > 0 ? `Checking ${p.done}/${p.total}…` : 'Checking…'
+    if (p.running) return p.total > 0 ? `Checking ${p.done}/${p.total}...` : 'Checking...'
     const last = isZeroTime(p.lastCheckedAt) ? '' : relativeTime(p.lastCheckedAt, now)
-    if (p.error === 'offline') return last ? `Couldn't check — offline · last ${last}` : `Couldn't check — offline`
+    if (p.error === 'offline') return last ? `Offline, couldn't check (last check ${last})` : `Offline, couldn't check`
     return last ? `↻ Checked ${last}` : '↻ Check for new chapters'
 }
 

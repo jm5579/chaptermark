@@ -102,7 +102,7 @@ func (m manga) links() Links {
 	return l
 }
 
-// titles picks the romanized title ("ko-ro", "ja-ro", "zh-ro"…) and the
+// titles picks the romanized title ("ko-ro", "ja-ro", "zh-ro", ...) and the
 // longest original-language title (the shortest is often an abbreviation).
 func (m manga) titles() (romanized, native string) {
 	lang := m.Attributes.OriginalLanguage

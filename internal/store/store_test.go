@@ -95,7 +95,7 @@ func TestMigrateFromV1KeepsData(t *testing.T) {
 	s.DB().Exec(`INSERT INTO entry (series_id, status, my_chapter) VALUES (1, 'reading', 330)`)
 
 	if err := s.Migrate(ctx); err != nil {
-		t.Fatalf("Migrate v1→v2: %v", err)
+		t.Fatalf("Migrate v1 to v2: %v", err)
 	}
 	it, err := s.GetItem(ctx, 1)
 	if err != nil || it.Series.Title != "Eleceed" || it.Entry.MyChapter != 330 || it.Series.RomanizedTitle != "" {

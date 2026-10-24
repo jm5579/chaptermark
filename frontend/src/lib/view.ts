@@ -64,7 +64,7 @@ export function pickAltTitles(
     const others = (alts ?? []).filter(a => a !== title)
     const usable = (t?: string) => (t && t !== title ? t : undefined)
     // MangaDex's language-tagged titles are exact. When they're known, show only
-    // those — guessing the rest from the unlabeled list tends to pick translations.
+    // those; guessing the rest from the unlabeled list tends to pick translations.
     const knownTitles = [usable(known.romanized), usable(known.native)].filter((t): t is string => !!t)
     if (known.native || known.romanized) return knownTitles.slice(0, max)
     const latin = usable(known.romanized) ?? others.find(a => latinOnly.test(a) && !foreignArticle.test(a))

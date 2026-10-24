@@ -84,17 +84,17 @@ export function SeriesRow({it, now, onOpen}: { it: ItemView; now: Date; onOpen: 
             </span>
             <span className="row-progress">
                 {isPlan
-                    ? <span className="muted">{latest > 0 ? `${formatChapter(latest)} ch` : '–'}</span>
+                    ? <span className="muted">{latest > 0 ? `${formatChapter(latest)} ch` : '-'}</span>
                     : <>
-                        <span>{formatChapter(mine) === '–' ? '0' : formatChapter(mine)} / {formatChapter(latest)}</span>
+                        <span>{formatChapter(mine) === '-' ? '0' : formatChapter(mine)} / {formatChapter(latest)}</span>
                         <span className="bar"><i style={{width: `${pct}%`}}/></span>
                     </>}
             </span>
             <span>{hasNew(it) && <span className="badge-new">+{it.newCount}</span>}</span>
             <span className={it.entry.myRating > 0 ? 'star' : 'faint'}>
-                {it.entry.myRating > 0 ? `★ ${it.entry.myRating}` : '★ –'}
+                {it.entry.myRating > 0 ? `★ ${it.entry.myRating}` : '★ -'}
             </span>
-            <span className="muted">MU {it.series.muRating > 0 ? it.series.muRating.toFixed(1) : '–'}</span>
+            <span className="muted">MU {it.series.muRating > 0 ? it.series.muRating.toFixed(1) : '-'}</span>
             <span className="faint when">{isPlan ? '' : `read ${relativeTime(it.entry.lastReadAt, now)}`}</span>
         </button>
     )

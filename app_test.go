@@ -53,6 +53,19 @@ func TestInitReportsUnwritableFolder(t *testing.T) {
 	}
 }
 
+func TestFitWindowSize(t *testing.T) {
+	cases := []struct{ w, h, sw, sh, wantW, wantH int }{
+		{2400, 1350, 1366, 768, 1326, 688}, // saved on a big monitor, reopened on a laptop
+		{1280, 820, 1920, 1080, 1280, 820}, // fits: unchanged
+		{1280, 820, 0, 0, 1280, 820},       // screen size unknown: unchanged
+	}
+	for _, c := range cases {
+		if w, h := fitWindowSize(c.w, c.h, c.sw, c.sh); w != c.wantW || h != c.wantH {
+			t.Errorf("fitWindowSize(%d,%d on %dx%d) = %d,%d want %d,%d", c.w, c.h, c.sw, c.sh, w, h, c.wantW, c.wantH)
+		}
+	}
+}
+
 func TestSetupBacksUpExistingLibrary(t *testing.T) {
 	// A folder name with URI-special characters must still keep everything inside it.
 	dir := filepath.Join(t.TempDir(), "Manga #1 100%25", "data")

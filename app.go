@@ -111,12 +111,33 @@ func (a *App) domReady(ctx context.Context) {
 		return
 	}
 	if w.Width >= 1000 && w.Height >= 680 {
-		runtime.WindowSetSize(ctx, w.Width, w.Height)
+		width, height := w.Width, w.Height
+		if screens, err := runtime.ScreenGetAll(ctx); err == nil {
+			for _, s := range screens {
+				if s.IsCurrent {
+					width, height = fitWindowSize(width, height, s.Size.Width, s.Size.Height)
+				}
+			}
+		}
+		runtime.WindowSetSize(ctx, width, height)
 		runtime.WindowCenter(ctx)
 	}
 	if w.Maximised {
 		runtime.WindowMaximise(ctx)
 	}
+}
+
+// fitWindowSize shrinks a saved window size to fit a screen of sw×sh (the
+// folder may have been copied from a PC with a bigger monitor), leaving room
+// for the taskbar and title bar. An unknown screen size (0) changes nothing.
+func fitWindowSize(w, h, sw, sh int) (int, int) {
+	if sw > 0 && w > sw-40 {
+		w = sw - 40
+	}
+	if sh > 0 && h > sh-80 {
+		h = sh - 80
+	}
+	return w, h
 }
 
 // beforeClose saves the window size; returning false lets the window close.

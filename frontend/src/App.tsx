@@ -7,6 +7,7 @@ import {EmptyState, SeriesRow, Shelf, StatusTabs, TypeSwitch} from './components
 import {SearchPanel} from './components/SearchPanel'
 import {AddDialog} from './components/AddDialog'
 import {DetailPanel} from './components/DetailPanel'
+import {SettingsDialog} from './components/SettingsDialog'
 
 function upsert(items: ItemView[], v: ItemView): ItemView[] {
     const i = items.findIndex(x => x.series.id === v.series.id)
@@ -25,6 +26,7 @@ function App() {
     const [openId, setOpenId] = useState<number | null>(null)
     const [toast, setToast] = useState<string | null>(null)
     const [adding, setAdding] = useState<OnlineResult | null>(null)
+    const [settingsOpen, setSettingsOpen] = useState(false)
     const now = useNow()
 
     const reload = useCallback(async () => {
@@ -85,7 +87,7 @@ function App() {
                 progress={progress}
                 now={now}
                 onCheck={() => api.CheckNow()}
-                onSettings={() => undefined}
+                onSettings={() => setSettingsOpen(true)}
             />
             <main className="content">
                 <TypeSwitch value={type} newCounts={view.newCounts} onChange={setType}/>
@@ -99,6 +101,8 @@ function App() {
                         : view.list.map(it => <SeriesRow key={it.series.id} it={it} now={now} onOpen={setOpenId}/>)}
                 </div>
             </main>
+            {settingsOpen && <SettingsDialog dataDir={init.dataDir} version={init.version}
+                                             onClose={() => setSettingsOpen(false)} onImported={reload}/>}
             {adding && <AddDialog result={adding} onClose={() => setAdding(null)} onAdded={onAdded}/>}
             {toast && <div className="toast" role="status">{toast}</div>}
             {openItem && (

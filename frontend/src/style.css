@@ -195,3 +195,12 @@ button.link:hover { background: transparent; text-decoration: underline; }
 .alt-titles .pill { font-size: 12px; padding: 3px 8px; }
 .danger-zone { align-items: flex-start; }
 .confirm { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* ---- Settings ---- */
+.settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.with-unit { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+.with-unit input { width: 90px; }
+.button-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.data-dir { font-family: Consolas, "Cascadia Mono", monospace; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; margin: 0; word-break: break-all; }
+.ok-text { color: #7ad69a; }
+.version { text-align: right; margin: 12px 0 0; }

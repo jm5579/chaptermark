@@ -11,6 +11,7 @@ import (
 
 	"github.com/jm5579/chaptermark/internal/covers"
 	"github.com/jm5579/chaptermark/internal/paths"
+	"github.com/jm5579/chaptermark/internal/webheaders"
 )
 
 //go:embed all:frontend/dist
@@ -43,7 +44,7 @@ func main() {
 		MinHeight: 680,
 		AssetServer: &assetserver.Options{
 			Assets:     assets,
-			Middleware: coverMiddleware,
+			Middleware: assetMiddleware(coverMiddleware),
 		},
 		BackgroundColour: &options.RGBA{R: 20, G: 18, B: 24, A: 1},
 		// Shown by domReady once the saved window size is applied (no resize flash).
@@ -64,4 +65,18 @@ func main() {
 	if err != nil {
 		println("Error:", err.Error())
 	}
+}
+
+// assetMiddleware puts the security headers in front of everything the page
+// loads, then the cover handler (absent if the data folder can't be used).
+func assetMiddleware(coverMW assetserver.Middleware) assetserver.Middleware {
+	csp := ""
+	if isProduction {
+		csp = webheaders.CSP
+	}
+	headers := assetserver.Middleware(webheaders.Middleware(csp))
+	if coverMW == nil {
+		return headers
+	}
+	return assetserver.ChainMiddleware(headers, coverMW)
 }

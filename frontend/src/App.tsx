@@ -1,9 +1,11 @@
 import {useCallback, useEffect, useMemo, useState} from 'react'
-import {api, errorMessage, onEvent, type InitResult, type ItemView, type Progress} from './lib/api'
+import {api, errorMessage, onEvent, type InitResult, type ItemView, type OnlineResult, type Progress} from './lib/api'
 import {useNow} from './lib/hooks'
 import {selectView, STATUS_LABELS, TYPE_LABELS, type StatusKey, type TypeKey} from './lib/view'
 import {TopBar} from './components/TopBar'
 import {EmptyState, SeriesRow, Shelf, StatusTabs, TypeSwitch} from './components/Home'
+import {SearchPanel} from './components/SearchPanel'
+import {AddDialog} from './components/AddDialog'
 
 function upsert(items: ItemView[], v: ItemView): ItemView[] {
     const i = items.findIndex(x => x.series.id === v.series.id)
@@ -21,6 +23,7 @@ function App() {
     const [progress, setProgress] = useState<Progress | null>(null)
     const [openId, setOpenId] = useState<number | null>(null)
     const [toast, setToast] = useState<string | null>(null)
+    const [adding, setAdding] = useState<OnlineResult | null>(null)
     const now = useNow()
 
     const reload = useCallback(async () => {
@@ -52,6 +55,14 @@ function App() {
         return () => clearTimeout(id)
     }, [toast])
 
+    const onAdded = (v: ItemView) => {
+        setItems(prev => upsert(prev, v))
+        setAdding(null)
+        setType(v.effectiveType as TypeKey)
+        setTab(v.entry.status as StatusKey)
+        setToast(`Added ${v.series.title}`)
+    }
+
     const view = useMemo(() => selectView(items, type, tab), [items, type, tab])
 
     if (!init) return <div className="splash">ChapterMark</div>
@@ -68,7 +79,7 @@ function App() {
     return (
         <div className="app">
             <TopBar
-                search={<input className="search-input" placeholder="Search your list or add a new series…" disabled/>}
+                search={<SearchPanel onOpen={setOpenId} onAdd={setAdding}/>}
                 progress={progress}
                 now={now}
                 onCheck={() => api.CheckNow()}
@@ -86,6 +97,7 @@ function App() {
                         : view.list.map(it => <SeriesRow key={it.series.id} it={it} now={now} onOpen={setOpenId}/>)}
                 </div>
             </main>
+            {adding && <AddDialog result={adding} onClose={() => setAdding(null)} onAdded={onAdded}/>}
             {toast && <div className="toast" role="status">{toast}</div>}
             {openId !== null && null}
         </div>

@@ -1,0 +1,21 @@
+# Owner data — never commit (repo is public)
+data/
+*.db
+*.db-wal
+*.db-shm
+chaptermark-export*.json
+
+# Build output
+build/bin/
+frontend/dist/
+frontend/node_modules/
+frontend/package.json.md5
+
+# Tooling
+.superpowers/
+*.exe
+*.zip
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

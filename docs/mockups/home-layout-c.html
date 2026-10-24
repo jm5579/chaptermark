@@ -1,0 +1,70 @@
+<style>
+  .mt { background:#141218; color:#ece8f1; border-radius:10px; padding:14px; font-size:13px; font-family:system-ui,Segoe UI,sans-serif; }
+  .mt * { box-sizing:border-box; }
+  .mt-top { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+  .mt-logo { font-weight:700; letter-spacing:.5px; color:#ff8a5c; }
+  .mt-search { flex:1; background:#211e27; border:1px solid #33303b; border-radius:8px; padding:7px 10px; color:#8d8798; }
+  .mt-check { background:#2a2632; border-radius:8px; padding:7px 10px; color:#c9c3d4; white-space:nowrap; }
+  .mt-type { display:inline-flex; background:#211e27; border-radius:10px; padding:4px; gap:4px; margin-bottom:6px; }
+  .mt-type span { padding:7px 16px; border-radius:7px; color:#9b95a6; font-weight:600; }
+  .mt-type span.on { background:#ff8a5c; color:#141218; }
+  .mt-type em { font-style:normal; font-weight:700; font-size:11px; margin-left:6px; padding:1px 6px; border-radius:9px; background:#ff6b35; color:#fff; }
+  .mt-type span.on em { background:#141218; color:#ff8a5c; }
+  .mt-h { font-size:12px; text-transform:uppercase; letter-spacing:.8px; color:#9b95a6; margin:12px 0 8px; }
+  .mt-h b { color:#ff8a5c; }
+  .mt-cover { border-radius:6px; display:flex; align-items:flex-end; padding:6px; font-weight:700; color:#fff; text-shadow:0 1px 3px #0008; position:relative; }
+  .mt-new { position:absolute; top:6px; right:6px; background:#ff6b35; color:#fff; font-size:11px; font-weight:700; padding:2px 6px; border-radius:10px; text-shadow:none; }
+  .mt-me { color:#ffcf5c; font-weight:600; }
+  .mt-site { color:#8d8798; }
+  .mt-card .p { color:#b9b2c6; margin-top:4px; }
+  .mt-shelf { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; }
+  .mt-shelf .mt-cover { height:130px; }
+  .mt-row { display:grid; grid-template-columns:34px 1fr 150px 54px 60px 70px 90px; align-items:center; gap:10px; padding:6px 4px; border-bottom:1px solid #26232d; }
+  .mt-row .mt-cover { height:46px; width:34px; padding:0; }
+  .mt-row .t { font-weight:600; }
+  .mt-row .a { color:#7f798a; font-size:11px; }
+  .mt-row .when { color:#7f798a; font-size:11px; }
+  .mt-bar { height:5px; background:#2c2934; border-radius:3px; overflow:hidden; margin-top:4px; }
+  .mt-bar i { display:block; height:100%; background:#ff8a5c; }
+  .mt-badge { background:#ff6b35; color:#fff; font-weight:700; border-radius:10px; padding:2px 7px; font-size:11px; text-align:center; }
+  .mt-tabs { display:flex; gap:6px; margin:16px 0 6px; }
+  .mt-tabs span { padding:4px 10px; border-radius:14px; background:#211e27; color:#9b95a6; font-size:12px; }
+  .mt-tabs span.on { background:#3a3542; color:#ece8f1; font-weight:600; }
+  .mt-note { font-size:12px; color:var(--text-secondary); margin:6px 0 0; }
+  .c1{background:linear-gradient(160deg,#3a5bd9,#141a3a)} .c2{background:linear-gradient(160deg,#c0392b,#3a0f0b)}
+  .c3{background:linear-gradient(160deg,#16a085,#0b2e28)} .c4{background:linear-gradient(160deg,#d4a017,#3b2a05)}
+  .c5{background:linear-gradient(160deg,#8e44ad,#250f30)} .c6{background:linear-gradient(160deg,#2980b9,#0b2233)}
+  .c7{background:linear-gradient(160deg,#7f8c8d,#1e2324)} .c8{background:linear-gradient(160deg,#e67e22,#3a1d05)}
+</style>
+
+<h2>Layout C, with a Manhwa / Manga / Manhua switch</h2>
+<p class="subtitle">The app opens on Manhwa. Click Manga or Manhua to switch, and the covers and list below show only that type. Each button shows how many series of that type have new chapters, so you don't miss any.</p>
+
+<div class="mockup">
+  <div class="mockup-header">Home screen, opened on Manhwa</div>
+  <div class="mockup-body" style="padding:0">
+    <div class="mt">
+      <div class="mt-top"><span class="mt-logo">READLOG</span><span class="mt-search">Search your list or add a new series…</span><span class="mt-check">↻ Checked 2 min ago</span></div>
+
+      <div class="mt-type"><span class="on">Manhwa<em>5 new</em></span><span>Manga<em>2 new</em></span><span>Manhua<em>1 new</em></span></div>
+
+      <div class="mt-h"><b>New chapters · 5</b> &nbsp;sorted by your rating</div>
+      <div class="mt-shelf">
+        <div class="mt-card"><div class="mt-cover c1"><span class="mt-new">+36</span>ORV</div><div class="p">212 → 248 · <span class="mt-me">★10</span></div></div>
+        <div class="mt-card"><div class="mt-cover c2"><span class="mt-new">+33</span>Mount Hua</div><div class="p">98 → 131 · <span class="mt-me">★9</span></div></div>
+        <div class="mt-card"><div class="mt-cover c3"><span class="mt-new">+21</span>Nano</div><div class="p">180 → 201 · <span class="mt-me">★9</span></div></div>
+        <div class="mt-card"><div class="mt-cover c4"><span class="mt-new">+9</span>TBATE</div><div class="p">205 → 214 · <span class="mt-me">★8</span></div></div>
+        <div class="mt-card"><div class="mt-cover c5"><span class="mt-new">+12</span>SL Ragnarok</div><div class="p">30 → 42 · <span class="mt-me">★7</span></div></div>
+      </div>
+
+      <div class="mt-tabs"><span class="on">Reading · 14</span><span>Plan to read · 9</span><span>Completed · 31</span><span>On hold · 2</span><span>Dropped · 4</span></div>
+      <div class="mt-row"><div class="mt-cover c1"></div><div><div class="t">Omniscient Reader's Viewpoint</div><div class="a">Jeonjijeok Dokja Sijeom · 전지적 독자 시점</div></div><div>212 / 248<div class="mt-bar"><i style="width:85%"></i></div></div><span class="mt-badge">+36</span><span class="mt-me">★ 10</span><span class="mt-site">MU 8.9</span><span class="when">read 3 months ago</span></div>
+      <div class="mt-row"><div class="mt-cover c2"></div><div><div class="t">Return of the Mount Hua Sect</div><div class="a">Hwasan Gwihwan · 화산귀환</div></div><div>98 / 131<div class="mt-bar"><i style="width:75%"></i></div></div><span class="mt-badge">+33</span><span class="mt-me">★ 9</span><span class="mt-site">MU 8.7</span><span class="when">read 2 months ago</span></div>
+      <div class="mt-row"><div class="mt-cover c3"></div><div><div class="t">Nano Machine</div><div class="a">Nano Masin · 나노마신</div></div><div>180 / 201<div class="mt-bar"><i style="width:90%"></i></div></div><span class="mt-badge">+21</span><span class="mt-me">★ 9</span><span class="mt-site">MU 8.6</span><span class="when">read 5 weeks ago</span></div>
+      <div class="mt-row"><div class="mt-cover c6"></div><div><div class="t">Eleceed</div><div class="a">일렉시드</div></div><div>330 / 330<div class="mt-bar"><i style="width:100%"></i></div></div><span></span><span class="mt-me">★ 8</span><span class="mt-site">MU 8.8</span><span class="when">read 4 days ago</span></div>
+      <div class="mt-row"><div class="mt-cover c7"></div><div><div class="t">Tower of God</div><div class="a">Sin-ui Tap · 신의 탑</div></div><div>640 / 640<div class="mt-bar"><i style="width:100%"></i></div></div><span></span><span class="mt-me">★ 8</span><span class="mt-site">MU 8.5</span><span class="when">read 1 week ago</span></div>
+      <div class="mt-row"><div class="mt-cover c8"></div><div><div class="t">Lookism</div><div class="a">외모지상주의</div></div><div>540 / 540<div class="mt-bar"><i style="width:100%"></i></div></div><span></span><span class="mt-me">★ 6</span><span class="mt-site">MU 8.0</span><span class="when">read 2 days ago</span></div>
+    </div>
+  </div>
+</div>
+<p class="mt-note">The list includes every series in the selected tab: ones with new chapters first, then the rest, sorted by your rating within each group.</p>

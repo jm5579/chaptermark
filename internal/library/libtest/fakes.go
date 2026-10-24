@@ -19,10 +19,25 @@ type MU struct {
 	Results  []mangaupdates.SearchResult
 	Details  map[int64]mangaupdates.SeriesDetail
 	Releases map[int64]mangaupdates.Release
-	Err      error // returned by every call when set
+	Err      error         // returned by every call when set
+	Block    chan struct{} // when set, LatestRelease waits until it is closed
 
 	mu    sync.Mutex
 	Calls []int64 // series ids passed to LatestRelease, in order
+}
+
+// ResetCalls clears the recorded LatestRelease calls.
+func (f *MU) ResetCalls() {
+	f.mu.Lock()
+	f.Calls = nil
+	f.mu.Unlock()
+}
+
+// CallsSnapshot returns a copy of the recorded LatestRelease calls.
+func (f *MU) CallsSnapshot() []int64 {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]int64(nil), f.Calls...)
 }
 
 func (f *MU) Search(ctx context.Context, q string, page int) ([]mangaupdates.SearchResult, int, error) {
@@ -47,6 +62,9 @@ func (f *MU) LatestRelease(ctx context.Context, id int64) (mangaupdates.Release,
 	f.mu.Lock()
 	f.Calls = append(f.Calls, id)
 	f.mu.Unlock()
+	if f.Block != nil {
+		<-f.Block
+	}
 	if f.Err != nil {
 		return mangaupdates.Release{}, false, f.Err
 	}

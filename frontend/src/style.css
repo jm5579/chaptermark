@@ -220,7 +220,7 @@ button.link:hover { background: transparent; text-decoration: underline; }
 .status-badge.hiatus { background: #3d3420; color: #f2c14e; }
 .status-badge.finished { background: #1f3a2b; color: #7ad69a; }
 .status-badge.quiet { background: var(--surface-3); color: var(--muted); }
-.panel-head-text h2 .status-badge, .panel-head-text > .status-badge { vertical-align: 3px; }
+.panel-head-text > .status-badge { align-self: flex-start; margin-left: 0; }
 
 /* ---- Tags editor (series panel) ---- */
 .tag-editor { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }

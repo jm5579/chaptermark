@@ -117,6 +117,7 @@ export namespace library {
 	    effectiveType: string;
 	    effectiveLatest: number;
 	    newCount: number;
+	    adult: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new ItemView(source);
@@ -129,6 +130,7 @@ export namespace library {
 	        this.effectiveType = source["effectiveType"];
 	        this.effectiveLatest = source["effectiveLatest"];
 	        this.newCount = source["newCount"];
+	        this.adult = source["adult"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -207,6 +209,7 @@ export namespace main {
 	export class Settings {
 	    checkIntervalHours: number;
 	    backupsKeep: number;
+	    showAdult: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -216,6 +219,7 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.checkIntervalHours = source["checkIntervalHours"];
 	        this.backupsKeep = source["backupsKeep"];
+	        this.showAdult = source["showAdult"];
 	    }
 	}
 	export class ViewPrefs {
@@ -322,6 +326,9 @@ export namespace store {
 	    releaseIntervalDays: number;
 	    lastReleaseDate: string;
 	    altTitles: string[];
+	    genres: string[];
+	    contentRating: string;
+	    alAdult: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Series(source);
@@ -358,6 +365,9 @@ export namespace store {
 	        this.releaseIntervalDays = source["releaseIntervalDays"];
 	        this.lastReleaseDate = source["lastReleaseDate"];
 	        this.altTitles = source["altTitles"];
+	        this.genres = source["genres"];
+	        this.contentRating = source["contentRating"];
+	        this.alAdult = source["alAdult"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

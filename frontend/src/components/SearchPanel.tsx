@@ -2,15 +2,17 @@ import {useEffect, useRef, useState} from 'react'
 import {api, errorMessage, type ItemView, type OnlineResult} from '../lib/api'
 import {useDebounced, useEscape} from '../lib/hooks'
 import {formatChapter} from '../lib/time'
-import {STATUS_LABELS, TYPE_LABELS, type StatusKey, type TypeKey} from '../lib/view'
+import {STATUS_LABELS, TYPE_LABELS, visibleItems, type StatusKey, type TypeKey} from '../lib/view'
 import {Cover} from './Cover'
 
 function typeLabel(r: OnlineResult): string {
     return r.mappedType in TYPE_LABELS ? TYPE_LABELS[r.mappedType as TypeKey] : r.type || 'Other'
 }
 
-/** The top-bar search box with its results dropdown. */
-export function SearchPanel({onOpen, onAdd}: {
+/** The top-bar search box with its results dropdown. 18+ series are left out
+ *  unless showAdult is set (the backend does the same for MangaUpdates). */
+export function SearchPanel({showAdult, onOpen, onAdd}: {
+    showAdult: boolean
     onOpen: (seriesId: number) => void
     onAdd: (r: OnlineResult) => void
 }) {
@@ -63,7 +65,9 @@ export function SearchPanel({onOpen, onAdd}: {
         return () => {
             stale = true
         }
-    }, [debounced, showOther])
+    }, [debounced, showOther, showAdult])
+
+    const shownLocal = visibleItems(local, showAdult)
 
     const pick = (fn: () => void) => {
         fn()
@@ -82,9 +86,9 @@ export function SearchPanel({onOpen, onAdd}: {
                 <div className="search-panel">
                     <div className="search-section">
                         <h3>In your list</h3>
-                        {local.length === 0
+                        {shownLocal.length === 0
                             ? <p className="faint small">No match in your list.</p>
-                            : local.map(it => (
+                            : shownLocal.map(it => (
                                 <button key={it.series.id} className="result" onClick={() => pick(() => onOpen(it.series.id))}>
                                     <Cover file={it.series.coverFile} title={it.series.title} seed={it.series.id} className="thumb"/>
                                     <span className="result-main">

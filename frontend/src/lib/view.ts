@@ -21,6 +21,8 @@ export interface ItemLike {
     newCount: number
     series?: {title: string; muRating: number}
     entry: {status: string; myRating: number; lastReadAt: any; addedAt?: any; tags?: string[] | null}
+    /** Marked 18+ by any source; hidden unless the owner allows 18+ titles. */
+    adult?: boolean
 }
 
 export type ListItem = ItemLike & {series: {title: string; muRating: number}}
@@ -141,7 +143,14 @@ export interface ViewOptions {
     staleOnly?: boolean
     /** Only series with this tag (matched ignoring case); empty = all. */
     tag?: string
+    /** Include 18+ series (off by default). */
+    showAdult?: boolean
     now?: Date
+}
+
+/** The items the owner may see: 18+ series only when allowed. */
+export function visibleItems<T extends ItemLike>(items: T[], showAdult: boolean): T[] {
+    return showAdult ? items : items.filter(it => !it.adult)
 }
 
 export function selectView<T extends ItemLike>(items: T[], type: TypeKey, tab: StatusKey, opts: ViewOptions = {}): View<T> {
@@ -150,7 +159,7 @@ export function selectView<T extends ItemLike>(items: T[], type: TypeKey, tab: S
     const tagCounts: Record<string, number> = {}
     const ofType: T[] = []
     const inTab: T[] = []
-    for (const it of items) {
+    for (const it of visibleItems(items, opts.showAdult ?? false)) {
         if (hasNew(it) && it.effectiveType in newCounts) newCounts[it.effectiveType as TypeKey]++
         if (it.effectiveType !== type) continue
         ofType.push(it)

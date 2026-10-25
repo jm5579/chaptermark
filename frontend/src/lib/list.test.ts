@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest'
-import {isStale, selectView, sortItems, type ListItem} from './view'
+import {isStale, selectView, sortItems, visibleItems, type ListItem} from './view'
 
 const ZERO = '0001-01-01T00:00:00Z'
 let nextId = 1
@@ -43,6 +43,34 @@ describe('sortItems', () => {
         const input = [a, b, c]
         sortItems(input, 'title')
         expect(input).toEqual([a, b, c])
+    })
+})
+
+describe('18+ titles', () => {
+    const safe = li('Eleceed', {newCount: 3})
+    const adult = {...li('Secret Class', {newCount: 5, tags: ['Later']}), adult: true}
+    const adultManga = {...li('Another One', {type: 'manga', newCount: 2}), adult: true}
+    const all = [safe, adult, adultManga]
+
+    it('are left out of the shelf, list, counts and tags unless allowed', () => {
+        const v = selectView(all, 'manhwa', 'reading', {now})
+        expect(titles(v.list)).toEqual(['Eleceed'])
+        expect(titles(v.shelf)).toEqual(['Eleceed'])
+        expect(v.tabCounts.reading).toBe(1)
+        expect(v.newCounts).toEqual({manhwa: 1, manga: 0, manhua: 0})
+        expect(v.tagCounts).toEqual({})
+    })
+
+    it('show when allowed', () => {
+        const v = selectView(all, 'manhwa', 'reading', {now, showAdult: true})
+        expect(titles(v.list).sort()).toEqual(['Eleceed', 'Secret Class'])
+        expect(v.newCounts).toEqual({manhwa: 2, manga: 1, manhua: 0})
+        expect(v.tagCounts).toEqual({Later: 1})
+    })
+
+    it('visibleItems hides them unless allowed', () => {
+        expect(titles(visibleItems(all, false))).toEqual(['Eleceed'])
+        expect(visibleItems(all, true)).toEqual(all)
     })
 })
 

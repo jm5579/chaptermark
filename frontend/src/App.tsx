@@ -1,7 +1,7 @@
 import {useCallback, useEffect, useMemo, useState} from 'react'
 import {api, errorMessage, onEvent, type InitResult, type ItemView, type OnlineResult, type Progress} from './lib/api'
 import {useNow} from './lib/hooks'
-import {selectView, STATUS_LABELS, TYPE_LABELS, type SortMode, type StatusKey, type TypeKey} from './lib/view'
+import {selectView, STATUS_LABELS, TYPE_LABELS, visibleItems, type SortMode, type StatusKey, type TypeKey} from './lib/view'
 import {TopBar} from './components/TopBar'
 import {EmptyState, SeriesRow, Shelf, StatusTabs, TypeSwitch} from './components/Home'
 import {SearchPanel} from './components/SearchPanel'
@@ -29,6 +29,7 @@ function App() {
     const [adding, setAdding] = useState<OnlineResult | null>(null)
     const [settingsOpen, setSettingsOpen] = useState(false)
     const [filters, setFilters] = useState<ListFilters>({sort: 'smart', staleOnly: false, tag: ''})
+    const [showAdult, setShowAdult] = useState(false)
     const now = useNow()
 
     const reload = useCallback(async () => {
@@ -43,6 +44,8 @@ function App() {
         api.Init().then(async res => {
             setInit(res)
             if (!res.ready) return
+            // Before the list loads, so 18+ series never flash up.
+            setShowAdult((await api.GetSettings()).showAdult)
             await reload()
             setProgress(await api.CheckStatus())
             const p = await api.GetViewPrefs()
@@ -65,6 +68,11 @@ function App() {
     const onAdded = (v: ItemView) => {
         setItems(prev => upsert(prev, v))
         setAdding(null)
+        if (v.adult && !showAdult) {
+            // MangaDex or AniList can mark a series 18+ that MangaUpdates' genres didn't.
+            setToast(`Added ${v.series.title}. It's marked 18+, so it stays hidden until you allow 18+ titles in Settings.`)
+            return
+        }
         setType(v.effectiveType as TypeKey)
         setTab(v.entry.status as StatusKey)
         setToast(`Added ${v.series.title}`)
@@ -75,9 +83,10 @@ function App() {
         api.SaveViewPrefs(f as any).catch(e => setToast(errorMessage(e)))
     }
 
-    const view = useMemo(() => selectView(items, type, tab, {...filters, now}), [items, type, tab, filters, now])
-    const allTags = useMemo(() => [...new Set(items.flatMap(it => it.entry.tags ?? []))]
-        .sort((a, b) => a.localeCompare(b, undefined, {sensitivity: 'base'})), [items])
+    const visible = useMemo(() => visibleItems(items, showAdult), [items, showAdult])
+    const view = useMemo(() => selectView(items, type, tab, {...filters, showAdult, now}), [items, type, tab, filters, showAdult, now])
+    const allTags = useMemo(() => [...new Set(visible.flatMap(it => it.entry.tags ?? []))]
+        .sort((a, b) => a.localeCompare(b, undefined, {sensitivity: 'base'})), [visible])
     const filtering = filters.staleOnly || filters.tag !== ''
     const openItem = openId === null ? undefined : items.find(x => x.series.id === openId)
 
@@ -95,7 +104,7 @@ function App() {
     return (
         <div className="app">
             <TopBar
-                search={<SearchPanel onOpen={setOpenId} onAdd={setAdding}/>}
+                search={<SearchPanel showAdult={showAdult} onOpen={setOpenId} onAdd={setAdding}/>}
                 progress={progress}
                 now={now}
                 onCheck={() => api.CheckNow()}
@@ -108,7 +117,7 @@ function App() {
                 <ListToolbar value={filters} tagCounts={view.tagCounts} onChange={changeFilters}/>
                 <div className="series-list">
                     {view.list.length === 0
-                        ? <EmptyState text={items.length === 0
+                        ? <EmptyState text={visible.length === 0
                             ? 'Nothing here yet. Search above to add your first series.'
                             : filtering
                                 ? 'Nothing matches these filters.'
@@ -117,8 +126,9 @@ function App() {
                 </div>
             </main>
             {settingsOpen && <SettingsDialog dataDir={init.dataDir} version={init.version}
-                                             onClose={() => setSettingsOpen(false)} onImported={reload}
-                                             onTagsChanged={reload}/>}
+                                             onClose={() => setSettingsOpen(false)}
+                                             onSaved={s => setShowAdult(s.showAdult)}
+                                             onImported={reload} onTagsChanged={reload}/>}
             {adding && <AddDialog result={adding} onClose={() => setAdding(null)} onAdded={onAdded}/>}
             {toast && <div className="toast" role="status">{toast}</div>}
             {openItem && (

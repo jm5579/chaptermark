@@ -70,6 +70,10 @@ no matter which site you read it on, and shows you when new chapters have been t
     <td>Tag series with your own lists, like Favourites or Binge later, and filter by them.</td>
   </tr>
   <tr>
+    <td><b>18+ filter</b></td>
+    <td>Hentai, smut and other adult titles are hidden from search and from your list unless you allow them in Settings. Ecchi and mature titles still show.</td>
+  </tr>
+  <tr>
     <td><b>Backups</b></td>
     <td>A backup is saved every day you open the app (the last 10 are kept). You can also export your list to a single file and import it again. Your list opens offline.</td>
   </tr>
@@ -108,6 +112,7 @@ Requires Windows 10 or 11. It uses the Microsoft Edge WebView2 runtime that come
 - **Sort and filter the list.** Use the bar above the list to change the order, show only series you haven't read in 6+ months, or pick one of your tags. Your choices are remembered.
 - **Tag series.** In a series panel, type a tag such as *Favourites* and press Enter. Rename or delete tags in Settings.
 - **Check the release rhythm.** The series panel shows how often new chapters usually come out and when the last one was released. **Hiatus**, **Finished** and **Quiet** badges appear next to a title when they apply.
+- **Show or hide 18+ titles.** They are hidden by default. A title counts as 18+ when MangaUpdates tags it Hentai, Smut, Adult, Lolicon or Shotacon, MangaDex rates it erotica or pornographic, or AniList marks it adult. Tick **Show 18+ titles** in Settings to see them in search and in your list.
 - **Stay up to date.** ChapterMark checks for new chapters when it starts and again every 6 hours while it's open. You can change the interval in Settings or check right away with the **Checked** button at the top. If the sources are behind, you can set the latest chapter yourself in the series panel.
 
 ## Where your data lives

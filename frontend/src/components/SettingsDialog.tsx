@@ -6,15 +6,17 @@ import {TagManager} from './TagManager'
 type ImportStep = 'idle' | 'choose' | 'confirm-replace'
 
 /** Settings, tags, export/import and where the data lives. */
-export function SettingsDialog({dataDir, version, onClose, onImported, onTagsChanged}: {
+export function SettingsDialog({dataDir, version, onClose, onSaved, onImported, onTagsChanged}: {
     dataDir: string
     version: string
     onClose: () => void
+    onSaved: (s: Settings) => void
     onImported: () => void
     onTagsChanged: () => void
 }) {
     const [checkHours, setCheckHours] = useState('6')
     const [keep, setKeep] = useState('10')
+    const [showAdult, setShowAdult] = useState(false)
     const [message, setMessage] = useState('')
     const [error, setError] = useState('')
     const [importStep, setImportStep] = useState<ImportStep>('idle')
@@ -24,6 +26,7 @@ export function SettingsDialog({dataDir, version, onClose, onImported, onTagsCha
         api.GetSettings().then(s => {
             setCheckHours(String(s.checkIntervalHours))
             setKeep(String(s.backupsKeep))
+            setShowAdult(s.showAdult)
         })
     }, [])
 
@@ -42,7 +45,9 @@ export function SettingsDialog({dataDir, version, onClose, onImported, onTagsCha
     }
 
     const save = () => run(async () => {
-        await api.SaveSettings({checkIntervalHours: Number(checkHours), backupsKeep: Number(keep)} as Settings)
+        const s = {checkIntervalHours: Number(checkHours), backupsKeep: Number(keep), showAdult} as Settings
+        await api.SaveSettings(s)
+        onSaved(s)
         return 'Settings saved.'
     })
 
@@ -79,6 +84,16 @@ export function SettingsDialog({dataDir, version, onClose, onImported, onTagsCha
                         </span>
                     </label>
                 </div>
+                <label className="check-row">
+                    <input type="checkbox" checked={showAdult} onChange={e => setShowAdult(e.target.checked)}/>
+                    <span>
+                        <span className="check-title">Show 18+ titles</span>
+                        <span className="faint small">
+                            While this is off, titles that MangaUpdates, MangaDex or AniList mark as 18+ (hentai,
+                            smut, adult) are hidden from search and from your list. Ecchi and mature titles still show.
+                        </span>
+                    </span>
+                </label>
                 <div className="actions"><button type="submit" className="primary" disabled={busy}>Save settings</button></div>
             </form>
 

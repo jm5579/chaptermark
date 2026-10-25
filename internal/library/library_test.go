@@ -178,16 +178,16 @@ func TestNewCountAndEffectiveLatest(t *testing.T) {
 func TestSearchOnlineFlagsInLibraryAndHidesOther(t *testing.T) {
 	svc, _, _, _ := newService(t)
 	ctx := context.Background()
-	res, err := svc.SearchOnline(ctx, "orv", 1, false)
+	res, err := svc.SearchOnline(ctx, "orv", 1, false, false)
 	if err != nil || len(res) != 1 || res[0].InLibrary || res[0].MappedType != store.TypeManhwa {
 		t.Fatalf("before add: %+v %v", res, err)
 	}
 	added, _ := svc.Add(ctx, libtest.ORVID, AddInput{Status: store.StatusReading})
-	res, _ = svc.SearchOnline(ctx, "orv", 1, false)
+	res, _ = svc.SearchOnline(ctx, "orv", 1, false, false)
 	if !res[0].InLibrary || res[0].SeriesID != added.Series.ID {
 		t.Fatalf("after add: %+v", res[0])
 	}
-	res, _ = svc.SearchOnline(ctx, "orv", 1, true)
+	res, _ = svc.SearchOnline(ctx, "orv", 1, true, false)
 	if len(res) != 2 || res[1].MappedType != store.TypeOther {
 		t.Fatalf("includeOther: %+v", res)
 	}

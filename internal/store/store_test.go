@@ -74,8 +74,75 @@ func TestMigrateIdempotent(t *testing.T) {
 		t.Fatalf("second Migrate: %v", err)
 	}
 	var v int
-	if err := s.DB().QueryRow("PRAGMA user_version").Scan(&v); err != nil || v != 3 {
-		t.Fatalf("user_version = %d, %v; want 3", v, err)
+	if err := s.DB().QueryRow("PRAGMA user_version").Scan(&v); err != nil || v != 4 {
+		t.Fatalf("user_version = %d, %v; want 4", v, err)
+	}
+}
+
+func TestMigrateToV4RefreshesEverythingOnce(t *testing.T) {
+	ctx := context.Background()
+	s, err := Open(filepath.Join(t.TempDir(), "library.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	// A library at schema v3, checked and refreshed recently.
+	for _, m := range migrations[:3] {
+		if _, err := s.DB().Exec(m); err != nil {
+			t.Fatal(err)
+		}
+	}
+	s.DB().Exec("PRAGMA user_version = 3")
+	s.DB().Exec(`INSERT INTO series (id, mu_id, title, type, details_refreshed_at)
+		VALUES (1, 42, 'Eleceed', 'manhwa', '2026-10-20T10:00:00Z')`)
+	s.DB().Exec(`INSERT INTO entry (series_id, status) VALUES (1, 'completed')`)
+	s.SetMeta(ctx, "last_full_check_at", "2026-10-24T10:00:00Z")
+	s.SetMeta(ctx, "check_interval_hours", "12")
+
+	if err := s.Migrate(ctx); err != nil {
+		t.Fatalf("Migrate v3 to v4: %v", err)
+	}
+	// The 18+ labels are new, so every series is due a details refresh and
+	// a check runs at the next start.
+	it, err := s.GetItem(ctx, 1)
+	if err != nil || !it.Series.DetailsRefreshedAt.IsZero() || it.Series.Genres != nil {
+		t.Fatalf("after upgrade: %+v, %v", it.Series, err)
+	}
+	if _, ok, _ := s.GetMeta(ctx, "last_full_check_at"); ok {
+		t.Fatal("last check time should be cleared")
+	}
+	if v, ok, _ := s.GetMeta(ctx, "check_interval_hours"); !ok || v != "12" {
+		t.Fatalf("other settings must survive: %q %v", v, ok)
+	}
+}
+
+func TestContentLabelsRoundTrip(t *testing.T) {
+	s := newStore(t)
+	ctx := context.Background()
+	sr := orv()
+	sr.Genres, sr.ContentRating = []string{"Action", "Fantasy"}, "safe"
+	sr = addSeries(t, s, sr, "reading")
+	it, err := s.GetItem(ctx, sr.ID)
+	if err != nil || !reflect.DeepEqual(it.Series.Genres, []string{"Action", "Fantasy"}) ||
+		it.Series.ContentRating != "safe" || it.Series.ALAdult {
+		t.Fatalf("GetItem: %+v, %v", it.Series, err)
+	}
+
+	sr.Genres, sr.ContentRating, sr.ALAdult = []string{"Adult", "Smut"}, "erotica", true
+	if err := s.UpdateDetails(ctx, &sr); err != nil {
+		t.Fatal(err)
+	}
+	items, err := s.ListItems(ctx)
+	if err != nil || len(items) != 1 {
+		t.Fatalf("ListItems: %v, %v", items, err)
+	}
+	got := items[0].Series
+	if !reflect.DeepEqual(got.Genres, []string{"Adult", "Smut"}) || got.ContentRating != "erotica" || !got.ALAdult {
+		t.Fatalf("after UpdateDetails: genres %v, rating %q, AniList adult %v", got.Genres, got.ContentRating, got.ALAdult)
+	}
+	byMU, _, _ := s.SeriesByMUID(ctx, sr.MUID)
+	if !reflect.DeepEqual(byMU.Genres, got.Genres) || byMU.ContentRating != "erotica" || !byMU.ALAdult {
+		t.Fatalf("SeriesByMUID = %+v", byMU)
 	}
 }
 

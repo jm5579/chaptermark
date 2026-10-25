@@ -64,6 +64,12 @@ type Series struct {
 	ReleaseIntervalDays float64  `json:"releaseIntervalDays"`
 	LastReleaseDate     string   `json:"lastReleaseDate"`
 	AltTitles           []string `json:"altTitles"`
+	// 18+ labels, one from each source: MangaUpdates genres, MangaDex's
+	// content rating (safe, suggestive, erotica, pornographic) and AniList's
+	// adult flag.
+	Genres        []string `json:"genres"`
+	ContentRating string   `json:"contentRating"`
+	ALAdult       bool     `json:"alAdult"`
 }
 
 // Entry is the owner's own tracking for a series.
@@ -184,6 +190,14 @@ var migrations = []string{
 		tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
 		PRIMARY KEY (series_id, tag_id)
 	);`,
+	// v4: the 18+ labels. Existing series don't have them yet, so their details
+	// count as never refreshed and the last check as never run: the next start
+	// refreshes every series once.
+	`ALTER TABLE series ADD COLUMN genres TEXT NOT NULL DEFAULT '';
+	ALTER TABLE series ADD COLUMN content_rating TEXT NOT NULL DEFAULT '';
+	ALTER TABLE series ADD COLUMN al_adult INTEGER NOT NULL DEFAULT 0;
+	UPDATE series SET details_refreshed_at = '';
+	DELETE FROM meta WHERE key = 'last_full_check_at';`,
 }
 
 // SchemaVersion is the version Migrate brings the database to.

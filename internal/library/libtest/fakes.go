@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/jm5579/chaptermark/internal/sources/anilist"
 	"github.com/jm5579/chaptermark/internal/sources/mangadex"
 	"github.com/jm5579/chaptermark/internal/sources/mangaupdates"
 )
@@ -24,8 +25,9 @@ type MU struct {
 	OnSeries func()         // when set, runs inside Series (simulates edits during the network call)
 	OnLatest func(id int64) // when set, runs at the start of LatestRelease
 
-	mu    sync.Mutex
-	Calls []int64 // series ids passed to LatestRelease, in order
+	mu          sync.Mutex
+	Calls       []int64  // series ids passed to LatestRelease, in order
+	LastExclude []string // excludeGenres of the last Search
 }
 
 // ResetCalls clears the recorded LatestRelease calls.
@@ -42,7 +44,12 @@ func (f *MU) CallsSnapshot() []int64 {
 	return append([]int64(nil), f.Calls...)
 }
 
-func (f *MU) Search(ctx context.Context, q string, page int) ([]mangaupdates.SearchResult, int, error) {
+// Search returns every result, ignoring excludeGenres (recorded in
+// LastExclude), so tests can see the library filter results itself too.
+func (f *MU) Search(ctx context.Context, q string, page int, excludeGenres []string) ([]mangaupdates.SearchResult, int, error) {
+	f.mu.Lock()
+	f.LastExclude = excludeGenres
+	f.mu.Unlock()
 	if f.Err != nil {
 		return nil, 0, f.Err
 	}
@@ -109,15 +116,17 @@ func (f *MD) ByID(ctx context.Context, mdID string) (mangadex.Links, bool, error
 // AL is a fake AniList client.
 type AL struct {
 	Scores map[int]float64
+	Adult  map[int]bool
 	Err    error
 }
 
-func (f *AL) Score(ctx context.Context, id int) (float64, bool, error) {
+func (f *AL) Media(ctx context.Context, id int) (anilist.Media, bool, error) {
 	if f.Err != nil {
-		return 0, false, f.Err
+		return anilist.Media{}, false, f.Err
 	}
-	s, ok := f.Scores[id]
-	return s, ok, nil
+	score, hasScore := f.Scores[id]
+	adult, known := f.Adult[id]
+	return anilist.Media{Score: score, HasScore: hasScore, Adult: adult}, hasScore || known, nil
 }
 
 // Covers is a cover fetcher that pretends to save <id>.jpg.

@@ -1,4 +1,4 @@
-// Package anilist fetches AniList's public average score for a manga.
+// Package anilist fetches AniList's public average score and 18+ flag for a manga.
 package anilist
 
 import (
@@ -15,11 +15,18 @@ type Client struct {
 	BaseURL string
 }
 
-const scoreQuery = `query ($id: Int) { Media(id: $id, type: MANGA) { averageScore } }`
+// Media is what ChapterMark uses from an AniList manga entry.
+type Media struct {
+	Score    float64 // averageScore converted from /100 to /10 (one decimal)
+	HasScore bool    // false while AniList has no score
+	Adult    bool    // AniList's own 18+ flag
+}
 
-// Score returns AniList's averageScore converted from /100 to /10 (one decimal).
-// ok is false when AniList has no score.
-func (c *Client) Score(ctx context.Context, id int) (float64, bool, error) {
+const mediaQuery = `query ($id: Int) { Media(id: $id, type: MANGA) { averageScore isAdult } }`
+
+// Media looks up a manga's score and 18+ flag. ok is false when AniList
+// returns no entry.
+func (c *Client) Media(ctx context.Context, id int) (Media, bool, error) {
 	base := c.BaseURL
 	if base == "" {
 		base = DefaultBaseURL
@@ -28,15 +35,20 @@ func (c *Client) Score(ctx context.Context, id int) (float64, bool, error) {
 		Data struct {
 			Media *struct {
 				AverageScore *int `json:"averageScore"`
+				IsAdult      bool `json:"isAdult"`
 			} `json:"Media"`
 		} `json:"data"`
 	}
-	body := map[string]any{"query": scoreQuery, "variables": map[string]any{"id": id}}
+	body := map[string]any{"query": mediaQuery, "variables": map[string]any{"id": id}}
 	if err := c.HTTP.PostJSON(ctx, base, body, &resp); err != nil {
-		return 0, false, err
+		return Media{}, false, err
 	}
-	if resp.Data.Media == nil || resp.Data.Media.AverageScore == nil {
-		return 0, false, nil
+	if resp.Data.Media == nil {
+		return Media{}, false, nil
 	}
-	return math.Round(float64(*resp.Data.Media.AverageScore)) / 10, true, nil
+	m := Media{Adult: resp.Data.Media.IsAdult}
+	if s := resp.Data.Media.AverageScore; s != nil {
+		m.Score, m.HasScore = math.Round(float64(*s))/10, true
+	}
+	return m, true, nil
 }

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -15,8 +16,9 @@ import (
 )
 
 type fixtureServer struct {
-	releases    string
-	lastRelBody map[string]any
+	releases       string
+	lastRelBody    map[string]any
+	lastSearchBody map[string]any
 }
 
 func newTestClient(t *testing.T, fs *fixtureServer) *Client {
@@ -25,6 +27,7 @@ func newTestClient(t *testing.T, fs *fixtureServer) *Client {
 		var file string
 		switch {
 		case r.Method == http.MethodPost && r.URL.Path == "/series/search":
+			json.NewDecoder(r.Body).Decode(&fs.lastSearchBody)
 			file = "search_orv.json"
 		case r.Method == http.MethodGet && r.URL.Path == "/series/50369844984":
 			file = "series_orv.json"
@@ -46,8 +49,9 @@ func newTestClient(t *testing.T, fs *fixtureServer) *Client {
 }
 
 func TestSearchFindsORVByKoreanName(t *testing.T) {
-	c := newTestClient(t, &fixtureServer{})
-	results, total, err := c.Search(context.Background(), "jeonjijeok dokja sijeom", 1)
+	fs := &fixtureServer{}
+	c := newTestClient(t, fs)
+	results, total, err := c.Search(context.Background(), "jeonjijeok dokja sijeom", 1, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,6 +64,25 @@ func TestSearchFindsORVByKoreanName(t *testing.T) {
 	}
 	if r.Title != "Omniscient Reader" || !strings.HasPrefix(r.CoverURL, "https://") || r.URL == "" {
 		t.Fatalf("first result = %+v", r)
+	}
+	want := []string{"Action", "Adventure", "Drama", "Fantasy", "Mystery", "Psychological", "Supernatural"}
+	if !reflect.DeepEqual(r.Genres, want) {
+		t.Fatalf("genres = %v, want %v", r.Genres, want)
+	}
+	if _, sent := fs.lastSearchBody["exclude_genre"]; sent {
+		t.Fatalf("exclude_genre sent without being asked for: %v", fs.lastSearchBody)
+	}
+}
+
+func TestSearchExcludesGenres(t *testing.T) {
+	fs := &fixtureServer{}
+	c := newTestClient(t, fs)
+	if _, _, err := c.Search(context.Background(), "secret class", 1, []string{"Hentai", "Smut"}); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := fs.lastSearchBody["exclude_genre"].([]any)
+	if len(got) != 2 || got[0] != "Hentai" || got[1] != "Smut" {
+		t.Fatalf("exclude_genre = %v", fs.lastSearchBody["exclude_genre"])
 	}
 }
 
@@ -77,6 +100,9 @@ func TestSeriesDetail(t *testing.T) {
 	}
 	if d.Year != "2020" || !strings.Contains(d.Status, "Chapters") || d.CoverURL == "" {
 		t.Fatalf("detail = %+v", d)
+	}
+	if want := []string{"Action", "Adventure", "Drama", "Fantasy", "Mystery", "Psychological", "Supernatural"}; !reflect.DeepEqual(d.Genres, want) {
+		t.Fatalf("genres = %v, want %v", d.Genres, want)
 	}
 }
 

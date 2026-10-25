@@ -33,13 +33,15 @@ const (
 	metaInterval = "check_interval_hours"
 	metaBackups  = "backups_keep"
 	metaWindow   = "window"
+	metaAdult    = "show_adult"
 )
 
 var errNotReady = errors.New("ChapterMark couldn't open its data folder")
 
 type Settings struct {
-	CheckIntervalHours int `json:"checkIntervalHours"`
-	BackupsKeep        int `json:"backupsKeep"`
+	CheckIntervalHours int  `json:"checkIntervalHours"`
+	BackupsKeep        int  `json:"backupsKeep"`
+	ShowAdult          bool `json:"showAdult"` // show 18+ titles (see library.IsAdult); off by default
 }
 
 var defaultSettings = Settings{CheckIntervalHours: 6, BackupsKeep: 10}
@@ -237,6 +239,9 @@ func (a *App) loadSettings(ctx context.Context) {
 	if s.validate() != nil {
 		s = defaultSettings
 	}
+	if v, ok, _ := a.store.GetMeta(ctx, metaAdult); ok {
+		s.ShowAdult = v == "true"
+	}
 	a.mu.Lock()
 	a.settings = s
 	a.mu.Unlock()
@@ -292,7 +297,7 @@ func (a *App) SearchOnline(q string, page int, includeOther bool) ([]library.Onl
 	if err := a.ready(); err != nil {
 		return nil, err
 	}
-	res, err := a.lib.SearchOnline(context.Background(), q, page, includeOther)
+	res, err := a.lib.SearchOnline(context.Background(), q, page, includeOther, a.GetSettings().ShowAdult)
 	if errors.Is(err, httpx.ErrOffline) {
 		return nil, errors.New("couldn't reach MangaUpdates. Check your internet connection")
 	}
@@ -356,6 +361,9 @@ func (a *App) SaveSettings(s Settings) error {
 		return err
 	}
 	if err := a.store.SetMeta(ctx, metaBackups, strconv.Itoa(s.BackupsKeep)); err != nil {
+		return err
+	}
+	if err := a.store.SetMeta(ctx, metaAdult, strconv.FormatBool(s.ShowAdult)); err != nil {
 		return err
 	}
 	a.mu.Lock()

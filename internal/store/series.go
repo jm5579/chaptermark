@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"strings"
 	"time"
@@ -14,7 +15,7 @@ const seriesCols = `s.id, s.mu_id, s.md_id, s.al_id, s.mal_id, s.title, s.mu_url
 	s.type, s.type_override, s.completed, s.cover_file, s.cover_url, s.mu_rating, s.mu_votes, s.al_rating,
 	s.latest_chapter, s.latest_raw, s.latest_group, s.latest_date, s.latest_manual,
 	s.details_refreshed_at, s.chapters_checked_at, s.romanized_title, s.native_title,
-	s.release_interval_days, s.last_release_date`
+	s.release_interval_days, s.last_release_date, s.genres, s.content_rating, s.al_adult`
 
 const entryCols = `e.series_id, e.status, e.my_chapter, e.my_rating, e.notes, e.read_url,
 	e.last_read_at, e.added_at, e.updated_at`
@@ -25,11 +26,12 @@ func scanItem(row scanner, withEntry bool) (Item, error) {
 	var it Item
 	sr := &it.Series
 	var manual sql.NullFloat64
-	var detailsAt, checkedAt string
+	var detailsAt, checkedAt, genres string
 	dest := []any{&sr.ID, &sr.MUID, &sr.MDID, &sr.ALID, &sr.MALID, &sr.Title, &sr.MUURL, &sr.Year, &sr.PubStatus,
 		&sr.Type, &sr.TypeOverride, &sr.Completed, &sr.CoverFile, &sr.CoverURL, &sr.MURating, &sr.MUVotes, &sr.ALRating,
 		&sr.LatestChapter, &sr.LatestRaw, &sr.LatestGroup, &sr.LatestDate, &manual, &detailsAt, &checkedAt,
-		&sr.RomanizedTitle, &sr.NativeTitle, &sr.ReleaseIntervalDays, &sr.LastReleaseDate}
+		&sr.RomanizedTitle, &sr.NativeTitle, &sr.ReleaseIntervalDays, &sr.LastReleaseDate,
+		&genres, &sr.ContentRating, &sr.ALAdult}
 	e := &it.Entry
 	var lastRead, added, updated string
 	if withEntry {
@@ -43,6 +45,7 @@ func scanItem(row scanner, withEntry bool) (Item, error) {
 		sr.LatestManual = &v
 	}
 	sr.DetailsRefreshedAt, sr.ChaptersCheckedAt = parseTime(detailsAt), parseTime(checkedAt)
+	sr.Genres = decodeList(genres)
 	e.LastReadAt, e.AddedAt, e.UpdatedAt = parseTime(lastRead), parseTime(added), parseTime(updated)
 	return it, nil
 }
@@ -52,6 +55,23 @@ func nullable(v *float64) any {
 		return nil
 	}
 	return *v
+}
+
+// encodeList stores a list of names as JSON ("" for none).
+func encodeList(l []string) string {
+	if len(l) == 0 {
+		return ""
+	}
+	b, _ := json.Marshal(l)
+	return string(b)
+}
+
+func decodeList(s string) []string {
+	var l []string
+	if s != "" {
+		json.Unmarshal([]byte(s), &l)
+	}
+	return l
 }
 
 // UpsertSeries inserts or updates sr by MUID, sets sr.ID, and replaces its
@@ -65,8 +85,8 @@ func (s *Store) UpsertSeries(ctx context.Context, sr *Series) error {
 	err = tx.QueryRowContext(ctx, `INSERT INTO series (mu_id, md_id, al_id, mal_id, title, mu_url, year, pub_status,
 		type, type_override, completed, cover_file, cover_url, mu_rating, mu_votes, al_rating,
 		latest_chapter, latest_raw, latest_group, latest_date, latest_manual, details_refreshed_at, chapters_checked_at,
-		romanized_title, native_title, release_interval_days, last_release_date)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+		romanized_title, native_title, release_interval_days, last_release_date, genres, content_rating, al_adult)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 		ON CONFLICT(mu_id) DO UPDATE SET md_id=excluded.md_id, al_id=excluded.al_id, mal_id=excluded.mal_id,
 		title=excluded.title, mu_url=excluded.mu_url, year=excluded.year, pub_status=excluded.pub_status,
 		type=excluded.type, type_override=excluded.type_override, completed=excluded.completed,
@@ -76,13 +96,14 @@ func (s *Store) UpsertSeries(ctx context.Context, sr *Series) error {
 		latest_manual=excluded.latest_manual, details_refreshed_at=excluded.details_refreshed_at,
 		chapters_checked_at=excluded.chapters_checked_at, romanized_title=excluded.romanized_title,
 		native_title=excluded.native_title, release_interval_days=excluded.release_interval_days,
-		last_release_date=excluded.last_release_date
+		last_release_date=excluded.last_release_date, genres=excluded.genres,
+		content_rating=excluded.content_rating, al_adult=excluded.al_adult
 		RETURNING id`,
 		sr.MUID, sr.MDID, sr.ALID, sr.MALID, sr.Title, sr.MUURL, sr.Year, sr.PubStatus,
 		sr.Type, sr.TypeOverride, sr.Completed, sr.CoverFile, sr.CoverURL, sr.MURating, sr.MUVotes, sr.ALRating,
 		sr.LatestChapter, sr.LatestRaw, sr.LatestGroup, sr.LatestDate, nullable(sr.LatestManual),
 		fmtTime(sr.DetailsRefreshedAt), fmtTime(sr.ChaptersCheckedAt), sr.RomanizedTitle, sr.NativeTitle,
-		sr.ReleaseIntervalDays, sr.LastReleaseDate).Scan(&sr.ID)
+		sr.ReleaseIntervalDays, sr.LastReleaseDate, encodeList(sr.Genres), sr.ContentRating, sr.ALAdult).Scan(&sr.ID)
 	if err != nil {
 		return err
 	}
@@ -109,10 +130,11 @@ func (s *Store) UpdateDetails(ctx context.Context, sr *Series) error {
 	defer tx.Rollback()
 	res, err := tx.ExecContext(ctx, `UPDATE series SET md_id = ?, al_id = ?, mal_id = ?, title = ?, mu_url = ?,
 		year = ?, pub_status = ?, type = ?, completed = ?, cover_file = ?, cover_url = ?, mu_rating = ?,
-		mu_votes = ?, al_rating = ?, details_refreshed_at = ?, romanized_title = ?, native_title = ? WHERE id = ?`,
+		mu_votes = ?, al_rating = ?, details_refreshed_at = ?, romanized_title = ?, native_title = ?,
+		genres = ?, content_rating = ?, al_adult = ? WHERE id = ?`,
 		sr.MDID, sr.ALID, sr.MALID, sr.Title, sr.MUURL, sr.Year, sr.PubStatus, sr.Type, sr.Completed,
 		sr.CoverFile, sr.CoverURL, sr.MURating, sr.MUVotes, sr.ALRating, fmtTime(sr.DetailsRefreshedAt),
-		sr.RomanizedTitle, sr.NativeTitle, sr.ID)
+		sr.RomanizedTitle, sr.NativeTitle, encodeList(sr.Genres), sr.ContentRating, sr.ALAdult, sr.ID)
 	if err != nil {
 		return err
 	}

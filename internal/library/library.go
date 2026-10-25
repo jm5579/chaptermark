@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jm5579/chaptermark/internal/sources/anilist"
 	"github.com/jm5579/chaptermark/internal/sources/mangadex"
 	"github.com/jm5579/chaptermark/internal/sources/mangaupdates"
 	"github.com/jm5579/chaptermark/internal/store"
@@ -19,7 +20,7 @@ import (
 const detailsMaxAge = 7 * 24 * time.Hour
 
 type MU interface {
-	Search(ctx context.Context, q string, page int) ([]mangaupdates.SearchResult, int, error)
+	Search(ctx context.Context, q string, page int, excludeGenres []string) ([]mangaupdates.SearchResult, int, error)
 	Series(ctx context.Context, id int64) (mangaupdates.SeriesDetail, error)
 	LatestRelease(ctx context.Context, id int64) (mangaupdates.Release, bool, error)
 }
@@ -30,7 +31,7 @@ type MD interface {
 }
 
 type AL interface {
-	Score(ctx context.Context, id int) (float64, bool, error)
+	Media(ctx context.Context, id int) (anilist.Media, bool, error)
 }
 
 // CoverFetcher downloads a cover for a series and returns the saved file name.
@@ -129,16 +130,22 @@ func (s *Service) SearchLocal(ctx context.Context, q string) ([]ItemView, error)
 }
 
 // SearchOnline searches MangaUpdates. Types other than manga/manhwa/manhua are
-// dropped unless includeOther is set.
-func (s *Service) SearchOnline(ctx context.Context, q string, page int, includeOther bool) ([]OnlineResult, error) {
-	results, _, err := s.MU.Search(ctx, q, page)
+// dropped unless includeOther is set, and series with an 18+ genre unless
+// includeAdult is set. MangaUpdates leaves those out itself, so a page stays
+// full; they are checked again here in case it ever doesn't.
+func (s *Service) SearchOnline(ctx context.Context, q string, page int, includeOther, includeAdult bool) ([]OnlineResult, error) {
+	var exclude []string
+	if !includeAdult {
+		exclude = AdultGenres
+	}
+	results, _, err := s.MU.Search(ctx, q, page, exclude)
 	if err != nil {
 		return nil, err
 	}
 	out := []OnlineResult{}
 	for _, r := range results {
 		mapped := mangaupdates.MapType(r.Type)
-		if mapped == store.TypeOther && !includeOther {
+		if (mapped == store.TypeOther && !includeOther) || (!includeAdult && adultGenre(r.Genres)) {
 			continue
 		}
 		or := OnlineResult{ID: r.ID, Title: r.Title, HitTitle: r.HitTitle, Type: r.Type, MappedType: mapped,
@@ -156,23 +163,24 @@ func applyDetails(sr *store.Series, d mangaupdates.SeriesDetail) {
 	sr.Title, sr.MUURL, sr.Year, sr.PubStatus = d.Title, d.URL, d.Year, d.Status
 	sr.Type, sr.Completed = mangaupdates.MapType(d.Type), d.Completed
 	sr.MURating, sr.MUVotes = d.Rating, d.Votes
-	sr.AltTitles = d.AltTitles
+	sr.AltTitles, sr.Genres = d.AltTitles, d.Genres
 	if d.CoverURL != "" {
 		sr.CoverURL = d.CoverURL
 	}
 }
 
-// enrich adds MangaDex links, AniList score and the cover. Failures here are
-// logged, never fatal: MangaUpdates data alone is enough.
+// enrich adds MangaDex links and content rating, the AniList score and adult
+// flag, and the cover. Failures here are logged, never fatal: MangaUpdates
+// data alone is enough.
 func (s *Service) enrich(ctx context.Context, sr *store.Series) {
-	if s.MD != nil && (sr.MDID == "" || (sr.RomanizedTitle == "" && sr.NativeTitle == "")) {
+	if s.MD != nil && (sr.MDID == "" || (sr.RomanizedTitle == "" && sr.NativeTitle == "") || sr.ContentRating == "") {
 		var links mangadex.Links
 		var ok bool
 		var err error
 		if sr.MDID == "" {
 			links, ok, err = s.MD.FindByMU(ctx, sr.Title, sr.MUID)
 		} else {
-			// Linked before titles were stored: fetch them by id.
+			// Linked before titles or the content rating were stored: fetch them by id.
 			links, ok, err = s.MD.ByID(ctx, sr.MDID)
 		}
 		if err != nil {
@@ -180,16 +188,20 @@ func (s *Service) enrich(ctx context.Context, sr *store.Series) {
 		} else if ok {
 			sr.MDID, sr.ALID, sr.MALID = links.MDID, links.ALID, links.MALID
 			sr.RomanizedTitle, sr.NativeTitle = links.Romanized, links.Native
+			sr.ContentRating = links.ContentRating
 			if sr.CoverURL == "" {
 				sr.CoverURL = links.CoverURL
 			}
 		}
 	}
 	if sr.ALID > 0 && s.AL != nil {
-		if score, ok, err := s.AL.Score(ctx, sr.ALID); err != nil {
-			log.Printf("anilist score for %q: %v", sr.Title, err)
+		if m, ok, err := s.AL.Media(ctx, sr.ALID); err != nil {
+			log.Printf("anilist lookup for %q: %v", sr.Title, err)
 		} else if ok {
-			sr.ALRating = score
+			if m.HasScore {
+				sr.ALRating = m.Score
+			}
+			sr.ALAdult = m.Adult
 		}
 	}
 }

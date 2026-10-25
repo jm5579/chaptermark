@@ -22,14 +22,15 @@ type Client struct {
 }
 
 type SearchResult struct {
-	ID       int64   `json:"id"`
-	Title    string  `json:"title"`
-	HitTitle string  `json:"hitTitle"`
-	Type     string  `json:"type"`
-	Year     string  `json:"year"`
-	URL      string  `json:"url"`
-	CoverURL string  `json:"coverUrl"`
-	Rating   float64 `json:"rating"`
+	ID       int64    `json:"id"`
+	Title    string   `json:"title"`
+	HitTitle string   `json:"hitTitle"`
+	Type     string   `json:"type"`
+	Year     string   `json:"year"`
+	URL      string   `json:"url"`
+	CoverURL string   `json:"coverUrl"`
+	Rating   float64  `json:"rating"`
+	Genres   []string `json:"genres"`
 }
 
 type SeriesDetail struct {
@@ -44,6 +45,7 @@ type SeriesDetail struct {
 	Votes     int
 	CoverURL  string
 	AltTitles []string
+	Genres    []string
 }
 
 type Release struct {
@@ -124,6 +126,19 @@ type seriesRecord struct {
 	Associated     []struct {
 		Title string `json:"title"`
 	} `json:"associated"`
+	Genres []struct {
+		Genre string `json:"genre"`
+	} `json:"genres"`
+}
+
+func (r seriesRecord) genres() []string {
+	out := []string{}
+	for _, g := range r.Genres {
+		if g.Genre != "" {
+			out = append(out, g.Genre)
+		}
+	}
+	return out
 }
 
 func (c *Client) base() string {
@@ -146,9 +161,9 @@ func MapType(muType string) store.SeriesType {
 	return store.TypeOther
 }
 
-// Search finds series by any of their names. It returns one page of results
-// and the total hit count.
-func (c *Client) Search(ctx context.Context, q string, page int) ([]SearchResult, int, error) {
+// Search finds series by any of their names, leaving out series with any of
+// excludeGenres. It returns one page of results and the total hit count.
+func (c *Client) Search(ctx context.Context, q string, page int, excludeGenres []string) ([]SearchResult, int, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -160,6 +175,9 @@ func (c *Client) Search(ctx context.Context, q string, page int) ([]SearchResult
 		} `json:"results"`
 	}
 	body := map[string]any{"search": q, "page": page, "perpage": 25}
+	if len(excludeGenres) > 0 {
+		body["exclude_genre"] = excludeGenres
+	}
 	if err := c.HTTP.PostJSON(ctx, c.base()+"/series/search", body, &resp); err != nil {
 		return nil, 0, err
 	}
@@ -168,6 +186,7 @@ func (c *Client) Search(ctx context.Context, q string, page int) ([]SearchResult
 		out = append(out, SearchResult{
 			ID: r.Record.SeriesID, Title: r.Record.Title, HitTitle: r.HitTitle, Type: r.Record.Type,
 			Year: r.Record.Year, URL: r.Record.URL, CoverURL: r.Record.Image.URL.Original, Rating: r.Record.BayesianRating,
+			Genres: r.Record.genres(),
 		})
 	}
 	return out, resp.TotalHits, nil
@@ -182,6 +201,7 @@ func (c *Client) Series(ctx context.Context, id int64) (SeriesDetail, error) {
 	d := SeriesDetail{
 		ID: r.SeriesID, Title: r.Title, URL: r.URL, Type: r.Type, Year: r.Year, Status: r.Status,
 		Completed: r.Completed, Rating: r.BayesianRating, Votes: r.RatingVotes, CoverURL: r.Image.URL.Original,
+		Genres: r.genres(),
 	}
 	for _, a := range r.Associated {
 		if a.Title != "" {

@@ -97,6 +97,43 @@ func TestRunSkipsCompletedAndDropped(t *testing.T) {
 	}
 }
 
+func TestRunFetchesMissingDetailsForEveryStatus(t *testing.T) {
+	f := newFixture(t, spec{1, store.StatusCompleted, 9}, spec{2, store.StatusDropped, 9}, spec{3, store.StatusReading, 1})
+	ctx := context.Background()
+	// After the upgrade that added 18+ labels: series 1 and 3 have never had
+	// their details refreshed; series 2 was refreshed recently.
+	for _, mu := range []int64{1, 3} {
+		if _, err := f.lib.Store.DB().Exec("UPDATE series SET details_refreshed_at = '' WHERE id = ?", f.ids[mu]); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, mu := range []int64{1, 2, 3} {
+		d := f.mu.Details[mu]
+		d.Genres = []string{"Smut"}
+		f.mu.Details[mu] = d
+	}
+	var last Progress
+	var updated []int64
+	if err := f.chk.Run(ctx, func(p Progress) { last = p }, func(v library.ItemView) { updated = append(updated, v.Series.MUID) }); err != nil {
+		t.Fatal(err)
+	}
+	if got := f.mu.CallsSnapshot(); !reflect.DeepEqual(got, []int64{3}) {
+		t.Fatalf("checked chapters of %v, want only the series being read", got)
+	}
+	for mu, wantAdult := range map[int64]bool{1: true, 2: false, 3: true} {
+		v, _ := f.lib.Get(ctx, f.ids[mu])
+		if v.Adult != wantAdult {
+			t.Errorf("series %d: adult = %v, want %v (genres %v)", mu, v.Adult, wantAdult, v.Series.Genres)
+		}
+	}
+	if !reflect.DeepEqual(updated, []int64{3, 1}) {
+		t.Fatalf("onItem = %v, want the read series first, then the completed one", updated)
+	}
+	if last.Done != 2 || last.Total != 2 || last.Failed != 0 {
+		t.Fatalf("progress = %+v", last)
+	}
+}
+
 func TestRunRefreshesNewChapters(t *testing.T) {
 	f := newFixture(t, spec{1, store.StatusReading, 5})
 	f.mu.Releases[1] = mangaupdates.Release{Chapter: 25, Raw: "25", Group: "G"}

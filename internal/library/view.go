@@ -12,6 +12,7 @@ type ItemView struct {
 	EffectiveType   store.SeriesType `json:"effectiveType"`
 	EffectiveLatest float64          `json:"effectiveLatest"`
 	NewCount        int              `json:"newCount"`
+	Adult           bool             `json:"adult"` // marked 18+ by any source (see IsAdult)
 }
 
 func (v ItemView) Item() store.Item { return store.Item{Series: v.Series, Entry: v.Entry} }
@@ -51,5 +52,6 @@ func viewOf(it store.Item) ItemView {
 		EffectiveType:   EffectiveType(it.Series),
 		EffectiveLatest: latest,
 		NewCount:        chapters.NewCount(latest, it.Entry.MyChapter),
+		Adult:           IsAdult(it.Series),
 	}
 }

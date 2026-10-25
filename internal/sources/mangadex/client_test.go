@@ -52,6 +52,9 @@ func TestFindByMUMatchesLink(t *testing.T) {
 	if links.Romanized != "Jeonjijeok Dokja Sijeom" || links.Native != "전지적 독자 시점" {
 		t.Fatalf("titles = %q / %q", links.Romanized, links.Native)
 	}
+	if links.ContentRating != "safe" {
+		t.Fatalf("ContentRating = %q, want safe", links.ContentRating)
+	}
 }
 
 func TestByID(t *testing.T) {
@@ -73,7 +76,8 @@ func TestByID(t *testing.T) {
 	if err != nil || !ok {
 		t.Fatalf("ByID: ok=%v err=%v", ok, err)
 	}
-	if links.ALID != 119257 || links.Romanized != "Jeonjijeok Dokja Sijeom" || links.Native != "전지적 독자 시점" {
+	if links.ALID != 119257 || links.Romanized != "Jeonjijeok Dokja Sijeom" || links.Native != "전지적 독자 시점" ||
+		links.ContentRating != "safe" {
 		t.Fatalf("links = %+v", links)
 	}
 	if _, ok, err := c.ByID(context.Background(), "missing"); ok || err == nil {

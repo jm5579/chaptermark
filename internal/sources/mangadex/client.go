@@ -25,6 +25,8 @@ type Links struct {
 	CoverURL  string
 	Romanized string // e.g. "Jeonjijeok Dokja Sijeom" (the "<lang>-ro" title)
 	Native    string // e.g. "전지적 독자 시점" (the original-language title)
+	// ContentRating is MangaDex's rating: safe, suggestive, erotica or pornographic.
+	ContentRating string
 }
 
 // manga is the part of a MangaDex manga record we use.
@@ -35,6 +37,7 @@ type manga struct {
 		AltTitles        []map[string]string `json:"altTitles"`
 		OriginalLanguage string              `json:"originalLanguage"`
 		Links            map[string]string   `json:"links"`
+		ContentRating    string              `json:"contentRating"`
 	} `json:"attributes"`
 	Relationships []struct {
 		Type       string `json:"type"`
@@ -90,7 +93,7 @@ func (c *Client) ByID(ctx context.Context, mdID string) (Links, bool, error) {
 }
 
 func (m manga) links() Links {
-	l := Links{MDID: m.ID}
+	l := Links{MDID: m.ID, ContentRating: m.Attributes.ContentRating}
 	l.ALID, _ = strconv.Atoi(m.Attributes.Links["al"])
 	l.MALID, _ = strconv.Atoi(m.Attributes.Links["mal"])
 	for _, r := range m.Relationships {

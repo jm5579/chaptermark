@@ -101,7 +101,9 @@ func checkable(st store.Status) bool {
 }
 
 // Run checks every Reading / On hold / Plan to read series, highest owner
-// rating first. It is a no-op if a check is already running.
+// rating first. Then it fetches details once for any other series that never
+// had them (after an upgrade or an import), without checking its chapters.
+// It is a no-op if a check is already running.
 func (c *Checker) Run(ctx context.Context, emit func(Progress), onItem func(library.ItemView)) error {
 	if !c.running.CompareAndSwap(false, true) {
 		return nil
@@ -114,11 +116,14 @@ func (c *Checker) Run(ctx context.Context, emit func(Progress), onItem func(libr
 	}
 	var todo []store.Item
 	for _, it := range items {
-		if checkable(it.Entry.Status) {
+		if checkable(it.Entry.Status) || it.Series.DetailsRefreshedAt.IsZero() {
 			todo = append(todo, it)
 		}
 	}
 	sort.SliceStable(todo, func(i, j int) bool {
+		if ci, cj := checkable(todo[i].Entry.Status), checkable(todo[j].Entry.Status); ci != cj {
+			return ci
+		}
 		a, b := todo[i].Entry, todo[j].Entry
 		if a.MyRating != b.MyRating {
 			return a.MyRating > b.MyRating
@@ -133,17 +138,12 @@ func (c *Checker) Run(ctx context.Context, emit func(Progress), onItem func(libr
 		if ctx.Err() != nil {
 			break
 		}
-		err := c.Lib.RefreshLatest(ctx, it.Series.ID)
+		err := c.refresh(ctx, it)
 		if errors.Is(err, store.ErrNotFound) {
 			// Removed by the owner while the check was running: nothing to do.
 			p.Done++
 			c.set(p, emit)
 			continue
-		}
-		if err == nil && c.Lib.DetailsStale(it) {
-			if derr := c.Lib.RefreshDetails(ctx, it.Series.ID); derr != nil {
-				log.Printf("refresh details %q: %v", it.Series.Title, derr)
-			}
 		}
 		p.Done++
 		if err != nil {
@@ -180,5 +180,23 @@ func (c *Checker) Run(ctx context.Context, emit func(Progress), onItem func(libr
 	}
 	p.Running = false
 	c.set(p, emit)
+	return nil
+}
+
+// refresh looks up the latest chapter of a series being read, plus its
+// details once they are a week old. A completed or dropped series only gets
+// its details, which it never had.
+func (c *Checker) refresh(ctx context.Context, it store.Item) error {
+	if !checkable(it.Entry.Status) {
+		return c.Lib.RefreshDetails(ctx, it.Series.ID)
+	}
+	if err := c.Lib.RefreshLatest(ctx, it.Series.ID); err != nil {
+		return err
+	}
+	if c.Lib.DetailsStale(it) {
+		if err := c.Lib.RefreshDetails(ctx, it.Series.ID); err != nil {
+			log.Printf("refresh details %q: %v", it.Series.Title, err)
+		}
+	}
 	return nil
 }

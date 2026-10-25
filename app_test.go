@@ -23,7 +23,10 @@ func TestSaveSettingsValidates(t *testing.T) {
 	if got := a.GetSettings(); got != (Settings{CheckIntervalHours: 6, BackupsKeep: 10}) {
 		t.Fatalf("defaults = %+v", got)
 	}
-	for _, bad := range []Settings{{0, 10}, {169, 10}, {6, 0}, {6, 200}} {
+	for _, bad := range []Settings{
+		{CheckIntervalHours: 0, BackupsKeep: 10}, {CheckIntervalHours: 169, BackupsKeep: 10},
+		{CheckIntervalHours: 6, BackupsKeep: 0}, {CheckIntervalHours: 6, BackupsKeep: 200},
+	} {
 		if err := a.SaveSettings(bad); err == nil {
 			t.Errorf("SaveSettings(%+v) should fail", bad)
 		}
@@ -36,6 +39,30 @@ func TestSaveSettingsValidates(t *testing.T) {
 	b := readyApp(t, dir)
 	if got := b.GetSettings(); got != (Settings{CheckIntervalHours: 12, BackupsKeep: 5}) {
 		t.Fatalf("persisted settings = %+v", got)
+	}
+}
+
+func TestShowAdultIsOffUntilAllowed(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "data")
+	a := readyApp(t, dir)
+	if a.GetSettings().ShowAdult {
+		t.Fatal("18+ titles must be hidden by default")
+	}
+	if err := a.SaveSettings(Settings{CheckIntervalHours: 6, BackupsKeep: 10, ShowAdult: true}); err != nil {
+		t.Fatal(err)
+	}
+	a.close()
+
+	b := readyApp(t, dir)
+	if !b.GetSettings().ShowAdult {
+		t.Fatal("allowing 18+ titles should be remembered")
+	}
+	if err := b.SaveSettings(Settings{CheckIntervalHours: 6, BackupsKeep: 10}); err != nil {
+		t.Fatal(err)
+	}
+	b.close()
+	if readyApp(t, dir).GetSettings().ShowAdult {
+		t.Fatal("turning 18+ titles off again should be remembered")
 	}
 }
 

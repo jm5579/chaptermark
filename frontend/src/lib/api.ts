@@ -1,7 +1,7 @@
 // Thin typed layer over the Wails-generated bindings.
 import * as App from '../../wailsjs/go/main/App'
 import {EventsOn} from '../../wailsjs/runtime/runtime'
-import type {checker, exportimport, library, main} from '../../wailsjs/go/models'
+import type {checker, exportimport, library, main, store} from '../../wailsjs/go/models'
 
 export type ItemView = library.ItemView
 export type OnlineResult = library.OnlineResult
@@ -11,6 +11,8 @@ export type Progress = checker.Progress
 export type Settings = main.Settings
 export type InitResult = main.InitResult
 export type ImportResult = exportimport.Result
+export type ViewPrefs = main.ViewPrefs
+export type Tag = store.Tag
 
 export const api = App
 
@@ -41,6 +43,7 @@ export function toUpdate(it: ItemView, patch: Partial<EntryUpdate> = {}): EntryU
         readUrl: it.entry.readUrl,
         typeOverride: it.series.typeOverride,
         latestManual: it.series.latestManual,
+        tags: it.entry.tags ?? [],
         ...patch,
     } as EntryUpdate
 }

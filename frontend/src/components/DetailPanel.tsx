@@ -5,15 +5,18 @@ import {formatChapter, formatDate, nextChapter, relativeTime} from '../lib/time'
 import {STATUS_LABELS, STATUSES, TYPE_LABELS, TYPES, type StatusKey, type TypeKey} from '../lib/view'
 import {Cover} from './Cover'
 import {RatingInput} from './ui'
+import {TagEditor} from './TagEditor'
+import {BADGE_HINTS, BADGE_LABELS, rhythmLabel, seriesBadge} from '../lib/rhythm'
 
 function muTypeLabel(t: string): string {
     return t in TYPE_LABELS ? TYPE_LABELS[t as TypeKey] : 'Other'
 }
 
 /** Right-hand panel for one series: update progress, rating, status, notes. */
-export function DetailPanel({item, now, onClose, onChange, onRemoved}: {
+export function DetailPanel({item, now, allTags, onClose, onChange, onRemoved}: {
     item: ItemView
     now: Date
+    allTags: string[]
     onClose: () => void
     onChange: (v: ItemView) => void
     onRemoved: (id: number) => void
@@ -82,6 +85,12 @@ export function DetailPanel({item, now, onClose, onChange, onRemoved}: {
     }
 
     const otherType = s.type === 'other' || !s.type
+    const badge = seriesBadge(s, now)
+    const rhythm = rhythmLabel(s.releaseIntervalDays)
+    const rhythmLine = [
+        rhythm && `Usually ${rhythm === 'irregular' ? 'irregular' : rhythm}`,
+        s.lastReleaseDate && `last release ${relativeTime(s.lastReleaseDate + 'T00:00:00Z', now)}`,
+    ].filter(Boolean).join(' · ')
     const latestLine = [
         s.latestRaw ? `Ch ${s.latestRaw}` : (s.latestChapter > 0 ? `Ch ${formatChapter(s.latestChapter)}` : 'No releases found yet'),
         s.latestGroup,
@@ -99,6 +108,7 @@ export function DetailPanel({item, now, onClose, onChange, onRemoved}: {
                     </Cover>
                     <div className="panel-head-text">
                         <h2>{s.title}</h2>
+                        {badge && <span className={`status-badge ${badge}`} title={BADGE_HINTS[badge]}>{BADGE_LABELS[badge]}</span>}
                         <div className="faint small">{[s.year, s.pubStatus.split('\n')[0]].filter(Boolean).join(' · ')}</div>
                         <label className="inline-field">Type
                             <select value={s.typeOverride || ''} onChange={ev => save({typeOverride: ev.target.value})}>
@@ -126,6 +136,7 @@ export function DetailPanel({item, now, onClose, onChange, onRemoved}: {
                 <section className="panel-section">
                     <h3>Latest translated chapter</h3>
                     <div>{latestLine}</div>
+                    {rhythmLine && <div className="muted small">{rhythmLine}</div>}
                     <label className="inline-field small">Set manually
                         <input type="number" min={0} step="any" placeholder="if the sources are behind" value={manual}
                                onChange={ev => setManual(ev.target.value)}
@@ -142,6 +153,11 @@ export function DetailPanel({item, now, onClose, onChange, onRemoved}: {
                         {STATUSES.map(st => <option key={st} value={st}>{STATUS_LABELS[st as StatusKey]}</option>)}
                     </select>
                     <RatingInput value={e.myRating} onChange={v => save({myRating: v})}/>
+                </section>
+
+                <section className="panel-section">
+                    <h3>Tags</h3>
+                    <TagEditor tags={e.tags ?? []} suggestions={allTags} onChange={tags => save({tags})}/>
                 </section>
 
                 <section className="panel-section">

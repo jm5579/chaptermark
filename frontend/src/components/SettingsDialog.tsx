@@ -1,15 +1,17 @@
 import {useEffect, useState} from 'react'
 import {api, errorMessage, type Settings} from '../lib/api'
 import {Modal} from './ui'
+import {TagManager} from './TagManager'
 
 type ImportStep = 'idle' | 'choose' | 'confirm-replace'
 
-/** Settings, export/import and where the data lives. */
-export function SettingsDialog({dataDir, version, onClose, onImported}: {
+/** Settings, tags, export/import and where the data lives. */
+export function SettingsDialog({dataDir, version, onClose, onImported, onTagsChanged}: {
     dataDir: string
     version: string
     onClose: () => void
     onImported: () => void
+    onTagsChanged: () => void
 }) {
     const [checkHours, setCheckHours] = useState('6')
     const [keep, setKeep] = useState('10')
@@ -79,6 +81,8 @@ export function SettingsDialog({dataDir, version, onClose, onImported}: {
                 </div>
                 <div className="actions"><button type="submit" className="primary" disabled={busy}>Save settings</button></div>
             </form>
+
+            <TagManager onChanged={onTagsChanged}/>
 
             <section className="panel-section">
                 <h3>Your list</h3>

@@ -1,13 +1,14 @@
 import {useCallback, useEffect, useMemo, useState} from 'react'
 import {api, errorMessage, onEvent, type InitResult, type ItemView, type OnlineResult, type Progress} from './lib/api'
 import {useNow} from './lib/hooks'
-import {selectView, STATUS_LABELS, TYPE_LABELS, type StatusKey, type TypeKey} from './lib/view'
+import {selectView, STATUS_LABELS, TYPE_LABELS, type SortMode, type StatusKey, type TypeKey} from './lib/view'
 import {TopBar} from './components/TopBar'
 import {EmptyState, SeriesRow, Shelf, StatusTabs, TypeSwitch} from './components/Home'
 import {SearchPanel} from './components/SearchPanel'
 import {AddDialog} from './components/AddDialog'
 import {DetailPanel} from './components/DetailPanel'
 import {SettingsDialog} from './components/SettingsDialog'
+import {ListToolbar, type ListFilters} from './components/ListToolbar'
 
 function upsert(items: ItemView[], v: ItemView): ItemView[] {
     const i = items.findIndex(x => x.series.id === v.series.id)
@@ -27,6 +28,7 @@ function App() {
     const [toast, setToast] = useState<string | null>(null)
     const [adding, setAdding] = useState<OnlineResult | null>(null)
     const [settingsOpen, setSettingsOpen] = useState(false)
+    const [filters, setFilters] = useState<ListFilters>({sort: 'smart', staleOnly: false, tag: ''})
     const now = useNow()
 
     const reload = useCallback(async () => {
@@ -43,6 +45,8 @@ function App() {
             if (!res.ready) return
             await reload()
             setProgress(await api.CheckStatus())
+            const p = await api.GetViewPrefs()
+            setFilters({sort: p.sort as SortMode, staleOnly: p.staleOnly, tag: p.tag})
         })
         const offItem = onEvent<ItemView>('library:item', v => setItems(prev => upsert(prev, v)))
         const offProgress = onEvent<Progress>('check:progress', setProgress)
@@ -66,7 +70,15 @@ function App() {
         setToast(`Added ${v.series.title}`)
     }
 
-    const view = useMemo(() => selectView(items, type, tab), [items, type, tab])
+    const changeFilters = (f: ListFilters) => {
+        setFilters(f)
+        api.SaveViewPrefs(f as any).catch(e => setToast(errorMessage(e)))
+    }
+
+    const view = useMemo(() => selectView(items, type, tab, {...filters, now}), [items, type, tab, filters, now])
+    const allTags = useMemo(() => [...new Set(items.flatMap(it => it.entry.tags ?? []))]
+        .sort((a, b) => a.localeCompare(b, undefined, {sensitivity: 'base'})), [items])
+    const filtering = filters.staleOnly || filters.tag !== ''
     const openItem = openId === null ? undefined : items.find(x => x.series.id === openId)
 
     if (!init) return <div className="splash">ChapterMark</div>
@@ -93,20 +105,24 @@ function App() {
                 <TypeSwitch value={type} newCounts={view.newCounts} onChange={setType}/>
                 <Shelf items={view.shelf} onOpen={setOpenId}/>
                 <StatusTabs value={tab} counts={view.tabCounts} onChange={setTab}/>
+                <ListToolbar value={filters} tagCounts={view.tagCounts} onChange={changeFilters}/>
                 <div className="series-list">
                     {view.list.length === 0
                         ? <EmptyState text={items.length === 0
                             ? 'Nothing here yet. Search above to add your first series.'
-                            : `No ${TYPE_LABELS[type].toLowerCase()} in "${STATUS_LABELS[tab]}".`}/>
+                            : filtering
+                                ? 'Nothing matches these filters.'
+                                : `No ${TYPE_LABELS[type].toLowerCase()} in "${STATUS_LABELS[tab]}".`}/>
                         : view.list.map(it => <SeriesRow key={it.series.id} it={it} now={now} onOpen={setOpenId}/>)}
                 </div>
             </main>
             {settingsOpen && <SettingsDialog dataDir={init.dataDir} version={init.version}
-                                             onClose={() => setSettingsOpen(false)} onImported={reload}/>}
+                                             onClose={() => setSettingsOpen(false)} onImported={reload}
+                                             onTagsChanged={reload}/>}
             {adding && <AddDialog result={adding} onClose={() => setAdding(null)} onAdded={onAdded}/>}
             {toast && <div className="toast" role="status">{toast}</div>}
             {openItem && (
-                <DetailPanel item={openItem} now={now} onClose={() => setOpenId(null)}
+                <DetailPanel item={openItem} now={now} allTags={allTags} onClose={() => setOpenId(null)}
                              onChange={v => setItems(prev => upsert(prev, v))}
                              onRemoved={id => {
                                  setItems(prev => prev.filter(x => x.series.id !== id))

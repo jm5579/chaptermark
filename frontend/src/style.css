@@ -204,3 +204,35 @@ button.link:hover { background: transparent; text-decoration: underline; }
 .data-dir { font-family: Consolas, "Cascadia Mono", monospace; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; margin: 0; word-break: break-all; }
 .ok-text { color: #7ad69a; }
 .version { text-align: right; margin: 12px 0 0; }
+
+/* ---- List toolbar: sort, 6-month filter, tag filter ---- */
+.list-toolbar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin: 4px 0 10px; }
+.list-toolbar .sort { display: flex; align-items: center; gap: 8px; }
+.list-toolbar select { padding: 5px 8px; font-size: 13px; }
+.list-toolbar .toggle { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; cursor: pointer; }
+.tag-filter { display: flex; gap: 6px; flex-wrap: wrap; }
+.tag-filter button { padding: 4px 10px; border-radius: 14px; font-size: 12px; background: var(--surface); color: var(--muted); }
+.tag-filter button.on { background: #3d2a22; color: var(--accent); font-weight: 600; }
+.tag-filter .count { opacity: .7; margin-left: 2px; }
+
+/* ---- Release status badges ---- */
+.status-badge { display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 9px; font-size: 10px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase; vertical-align: 2px; }
+.status-badge.hiatus { background: #3d3420; color: #f2c14e; }
+.status-badge.finished { background: #1f3a2b; color: #7ad69a; }
+.status-badge.quiet { background: var(--surface-3); color: var(--muted); }
+.panel-head-text h2 .status-badge, .panel-head-text > .status-badge { vertical-align: 3px; }
+
+/* ---- Tags editor (series panel) ---- */
+.tag-editor { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.tag-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 4px 3px 10px; border-radius: 14px; background: #3d2a22; color: var(--accent); font-size: 12px; font-weight: 600; }
+.tag-chip button { padding: 0 6px; background: transparent; color: var(--accent); font-size: 11px; border-radius: 10px; }
+.tag-chip button:hover { background: #5a3a2c; }
+.tag-editor input { flex: 1; min-width: 160px; padding: 5px 8px; font-size: 13px; }
+
+/* ---- Tag list (Settings) ---- */
+.tag-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.tag-list li { display: flex; align-items: center; gap: 10px; padding: 4px 0; }
+.tag-list .tag-name { font-weight: 600; min-width: 120px; }
+.tag-list button { padding: 4px 10px; font-size: 12px; }
+.tag-rename { display: flex; gap: 8px; align-items: center; flex: 1; }
+.tag-rename input { flex: 1; padding: 5px 8px; }

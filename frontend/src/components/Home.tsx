@@ -5,6 +5,7 @@ import {
     type StatusKey, type TypeKey,
 } from '../lib/view'
 import {Cover} from './Cover'
+import {BADGE_HINTS, BADGE_LABELS, seriesBadge} from '../lib/rhythm'
 
 export function TypeSwitch({value, newCounts, onChange}: {
     value: TypeKey
@@ -75,11 +76,12 @@ export function SeriesRow({it, now, onOpen}: { it: ItemView; now: Date; onOpen: 
     const mine = it.entry.myChapter
     const pct = latest > 0 ? Math.min(100, (mine / latest) * 100) : 0
     const isPlan = it.entry.status === 'plan'
+    const badge = seriesBadge(it.series, now)
     return (
         <button className="series-row" onClick={() => onOpen(it.series.id)} aria-label={it.series.title}>
             <Cover file={it.series.coverFile} title={it.series.title} seed={it.series.id} className="thumb"/>
             <span className="row-title">
-                <span className="t">{it.series.title}</span>
+                <span className="t">{it.series.title}{badge && <span className={`status-badge ${badge}`} title={BADGE_HINTS[badge]}>{BADGE_LABELS[badge]}</span>}</span>
                 <span className="a">{altLine(it)}</span>
             </span>
             <span className="row-progress">
